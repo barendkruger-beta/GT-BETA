@@ -1,6 +1,6 @@
 import streamlit as st
 import sqlite3
-from sqlalchemy import text, types
+#from sqlalchemy import text, types
 import pandas as pd
 
 tables = []
