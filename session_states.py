@@ -8,7 +8,11 @@ def init():
     if "participant" not in st.session_state:
         st.session_state.participant = None    
     participant = st.session_state.participant
-        
+
+    if "global_admin" not in st.session_state:
+        st.session_state.global_admin = None    
+    global_admin = st.session_state.global_admin
+            
     if "campaign" not in st.session_state:
         st.session_state.campaign = None
     campaign = st.session_state.campaign

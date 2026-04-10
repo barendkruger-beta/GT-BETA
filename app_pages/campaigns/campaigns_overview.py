@@ -69,15 +69,16 @@ if id is not None:
 else:
     col.button(label='', icon=':material/book_4:', disabled=True)
 
-if st.button("Reset DB"):
-    sql.testdata()
-    st.session_state.page = None
-    st.session_state.campaign = None
-    st.session_state.competition = None
-    st.session_state.event = None
-    st.session_state.scoring_card = None
-    st.session_state.hole_number = None
-    st.session_state.group = None
-    st.session_state.participant = None
-    
-    st.rerun()
+if False:
+    if st.button("Reset DB"):
+        sql.testdata()
+        st.session_state.page = None
+        st.session_state.campaign = None
+        st.session_state.competition = None
+        st.session_state.event = None
+        st.session_state.scoring_card = None
+        st.session_state.hole_number = None
+        st.session_state.group = None
+        st.session_state.participant = None
+        
+        st.rerun()

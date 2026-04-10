@@ -108,11 +108,12 @@ class EventDetails():
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'event_details_{df_id}_active')
                 buttons_area = st.container(horizontal=True)
                 with buttons_area:
-                    if st.button(label='', icon=':material/check:', key='event_details_update'):
-                        self.update(name=st_name, description=st_description, active=st_active)
-                    if st.button(label='', icon=':material/delete:', key='event_details_delete'):
-                        self.delete()                        
-    
+                    if st.session_state.global_admin:
+                        if st.button(label='', icon=':material/check:', key='event_details_update'):
+                            self.update(name=st_name, description=st_description, active=st_active)
+                        if st.button(label='', icon=':material/delete:', key='event_details_delete'):
+                            self.delete()                        
+        
     def update(self, name=None, description=None, active=None):
         if self.df is not None:
             sql_event = sql.events()
@@ -211,9 +212,9 @@ class EventScoringCards():
                 col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card", disabled=True)
                 if col.button(label='', icon=':material/book_4:', key=f"event[{event_id}]_open_scoring_card"): self.open(sel, self.child_page)
                 if col.button(label='', icon=':material/edit:', key=f"event[{event_id}]_edit_scoring_card"): self.edit(scoring_card_df=sel, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
-                if col.button(label='', icon=':material/arrow_upward:'): self.move(sel=sel, up=True)
-                if col.button(label='', icon=':material/arrow_downward:'): self.move(sel=sel, down=True)
-                if col.button(label='', icon=':material/delete:', key=f"event[{event_id}]_remove_scoring_card"): self.remove(scoring_card_df=sel)                
+                if col.button(label='', icon=':material/arrow_upward:', disabled=not st.session_state.global_admin): self.move(sel=sel, up=True)
+                if col.button(label='', icon=':material/arrow_downward:', disabled=not st.session_state.global_admin): self.move(sel=sel, down=True)
+                if col.button(label='', icon=':material/delete:', key=f"event[{event_id}]_remove_scoring_card", disabled=not st.session_state.global_admin): self.remove(scoring_card_df=sel)
             else:
                 if col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card"): self.add(event_id=event_id, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
                 col.button(label='', icon=':material/book_4:', key=f"event[{event_id}]_open_scoring_card", disabled=True)

@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import sql
 
+global_admin = False
+
 class CampaignDetails():
     obj = None
     df_sql = None
@@ -9,12 +11,27 @@ class CampaignDetails():
     parent_page = None
            
     def __init__(self, df=None):        
+        global global_admin
         self.df_sql = sql.campaigns()
         self.df = df     
         df_id = df['id'].tolist()[0]
         self.parent_page = "app_pages/campaigns/campaigns_overview.py"
         self.obj = st.expander(label='Details')
         
+        # Get user role
+        user_email = st.user.email
+        participants_sql = sql.participants()
+        participants_df = pd.DataFrame(participants_sql.read(f"WHERE table.email = '{user_email}'"))
+        if not participants_df.empty:
+            participant_id = participants_df['id'].tolist()[0]
+            campaign_participants_sql = sql.campaign_participants()
+            campaign_participants_df = pd.DataFrame(campaign_participants_sql.read(f"WHERE table.campaign_id = {df_id} AND table.participant_id = {participant_id}"))
+            if not campaign_participants_df.empty:
+                is_admin = campaign_participants_df['is_admin'].tolist()[0]
+            #print(f'User:{st.user.name} Admin:{is_admin}')
+            global_admin = is_admin > 0
+            st.session_state.global_admin = global_admin
+
         if self.df is not None:
             with self.obj:
                 st_name = st.text_input('Name', key=f'campaign_details_{df_id}_name', value=f'{self.df['name'].tolist()[0]}')
@@ -22,10 +39,11 @@ class CampaignDetails():
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'campaign_details_{df_id}_active')
                 buttons_area = st.container(horizontal=True)
                 with buttons_area:
-                    if st.button(label='', icon=':material/check:', key='campaign_details_update'):
-                        self.update(name=st_name, description=st_description, active=st_active)
-                    if st.button(label='', icon=':material/delete:', key='campaign_details_delete'):
-                        self.delete()                        
+                    if global_admin:
+                        if st.button(label='', icon=':material/check:', key='campaign_details_update'):
+                            self.update(name=st_name, description=st_description, active=st_active)
+                        if st.button(label='', icon=':material/delete:', key='campaign_details_delete'):
+                            self.delete()                        
     
     def update(self, name=None, description=None, active=None):
         if self.df is not None:
@@ -239,6 +257,7 @@ class CampaignGroupParticipants():
                 column_config = {key: None for key in pos_assigned_participants_df.columns.to_list()}
                 column_config['name'] = 'Name'
                 column_config['description'] = 'Description'
+                column_config['is_admin'] = 'Campaign Admin'
                 if not pos_assigned_participants_df.empty:
                     assigned_participants = st.dataframe(
                         pos_assigned_participants_df,
@@ -276,7 +295,7 @@ class CampaignGroupParticipants():
                         column_config=column_config
                     )
                       
-            if not pos_unassigned_groups_df.empty:
+            if not pos_unassigned_groups_df.empty and global_admin:
                 if len(unassigned_groups.selection['rows']):
                     ids = pos_unassigned_groups_df.iloc[unassigned_groups.selection['rows']]['id'].tolist()
                     sels = pos_unassigned_groups_df.query(f'id in {ids}')
@@ -284,10 +303,10 @@ class CampaignGroupParticipants():
                         self.add_groups(selection=sels)
                 else:
                     exp_unassigned_groups.button("Add", key="add_groups", disabled=True, width='stretch')
-            else: 
-                exp_unassigned_groups.button("Add", key="add_groups", disabled=True, width='stretch')
+            #else: 
+            #    exp_unassigned_groups.button("Add", key="add_groups", disabled=True, width='stretch')
             
-            if not pos_assigned_groups_df.empty:    
+            if not pos_assigned_groups_df.empty and global_admin:    
                 if len(assigned_groups.selection['rows']):
                     ids = pos_assigned_groups_df.iloc[assigned_groups.selection['rows']]['id'].tolist()
                     sels = pos_assigned_groups_df.query(f'id in {ids}')
@@ -295,10 +314,10 @@ class CampaignGroupParticipants():
                         self.remove_groups(selection=sels)
                 else:
                     exp_assigned_groups.button("Remove", key="remove_groups", disabled=True, width='stretch')
-            else:
-                exp_assigned_groups.button("Remove", key="remove_groups", disabled=True, width='stretch')
+            #else:
+            #    exp_assigned_groups.button("Remove", key="remove_groups", disabled=True, width='stretch')
             
-            if not pos_unassigned_participants_df.empty:               
+            if not pos_unassigned_participants_df.empty and global_admin:               
                 if len(unassigned_participants.selection['rows']):
                     ids = pos_unassigned_participants_df.iloc[unassigned_participants.selection['rows']]['id'].tolist()
                     sels = pos_unassigned_participants_df.query(f'id in {ids}')
@@ -306,10 +325,10 @@ class CampaignGroupParticipants():
                         self.add_participants(selection=sels)
                 else:
                     exp_unassigned_participants.button("Add", key="add_participants", disabled=True, width='stretch')
-            else:
-                exp_unassigned_participants.button("Add", key="add_participants", disabled=True, width='stretch')
+            #else:
+            #    exp_unassigned_participants.button("Add", key="add_participants", disabled=True, width='stretch')
             
-            if not pos_assigned_participants_df.empty:
+            if not pos_assigned_participants_df.empty and global_admin:
                 if len(assigned_participants.selection['rows']):
                     ids = pos_assigned_participants_df.iloc[assigned_participants.selection['rows']]['id'].tolist()
                     sels = pos_assigned_participants_df.query(f'id in {ids}')
@@ -317,8 +336,8 @@ class CampaignGroupParticipants():
                         self.remove_participants(selection=sels)
                 else:
                     exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
-            else:
-                exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
+            #else:
+            #    exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
           
     def add_groups(self, selection):
         fields = selection.columns.tolist()

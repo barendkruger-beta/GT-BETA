@@ -3,6 +3,7 @@ import pandas as pd
 import sql
 import matplotlib
 
+
 class CompetitionDetails():
     obj = None
     df = None
@@ -19,11 +20,12 @@ class CompetitionDetails():
                 st_description = st.text_area('Description', key=f'competition_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}')
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'competition_details_{df_id}_active')
                 buttons_area = st.container(horizontal=True)
-                with buttons_area:
-                    if st.button(label='', icon=':material/check:', key='competition_details_update'):
-                        self.update(name=st_name, description=st_description, active=st_active)
-                    if st.button(label='', icon=':material/delete:', key='competition_details_delete'):
-                        self.delete()                        
+                if st.session_state.global_admin:
+                    with buttons_area:
+                        if st.button(label='', icon=':material/check:', key='competition_details_update'):
+                            self.update(name=st_name, description=st_description, active=st_active)
+                        if st.button(label='', icon=':material/delete:', key='competition_details_delete'):
+                            self.delete()                        
     
     def update(self, name=None, description=None, active=None):
         if self.df is not None:
@@ -289,7 +291,7 @@ class CompetitionGroupParticipants():
                                 hide_index=True,
                                 column_config=column_config,
                             )
-                            if st.form_submit_button('Update'):
+                            if st.form_submit_button('Update', disabled=not st.session_state.global_admin):
                                 participants_form_update()
                             #print(self.participants_sql.columns)
                         #for entry in pos_assigned_participants_df.to_numpy().tolist():
@@ -345,7 +347,7 @@ class CompetitionGroupParticipants():
                 groups_ids = pos_all_groups_df.iloc[all_groups.selection['rows']]['id'].tolist()
                 groups_sels = pos_all_groups_df.query(f'id in {groups_ids}')
 
-                if exp_unassigned.button("Add", key="add_participants", width='stretch'):
+                if exp_unassigned.button("Add", key="add_participants", width='stretch', disabled=not st.session_state.global_admin):
                     # Create group if not already assigned
                     group_id = pos_all_groups_df.iloc[all_groups.selection['rows']]['id'].tolist()[0]
                     if pos_assigned_groups_df.empty:
