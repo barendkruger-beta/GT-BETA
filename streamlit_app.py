@@ -24,6 +24,7 @@ else:
     if "page" in st.session_state:
         if st.session_state.page is not None:
             page = st.session_state.page
+            print(page)
             st.session_state.page = None
             st.switch_page(page)                
     pg.run()

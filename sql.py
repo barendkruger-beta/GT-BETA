@@ -2,6 +2,7 @@ import streamlit as st
 import sqlite3
 #from sqlalchemy import text, types
 import pandas as pd
+from datetime import datetime
 
 tables = []
 
@@ -257,7 +258,15 @@ def init():
     
     conn.close()
     return None
-    
+
+def export_sql():
+    conn = connect()
+    suffix = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    fname = f'db_backups/GT_{suffix}.db'
+    conn.execute(f"VACUUM INTO '{fname}'")
+    conn.close()
+    return fname
+
 def testdata():
     conn = connect()    
     cursor = conn.cursor()
