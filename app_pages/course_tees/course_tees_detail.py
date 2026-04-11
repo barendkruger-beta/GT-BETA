@@ -93,35 +93,51 @@ class CourseTeeHoles():
         #card_df['Stroke'] = pd.to_numeric(card_df['Stroke'], errors='coerce').astype('Int64')
         par_out = par_in = par_tot = None
         dist_out = dist_in = dist_tot = None
-        for hole in range(1,19):
-            index = hole
-                        
+
+        # OUT
+        for hole in range(1,10):
+            index = hole            
             par = df[f't{hole}_par'].tolist()[0]
             stroke = df[f't{hole}_stroke'].tolist()[0]
             distance = df[f't{hole}_distance'].tolist()[0]
             card_df.loc[index] = [str(hole), par, stroke, distance]
-            if hole == 9:
-                par_out = card_df['Par'].sum()
-                dist_out = card_df['Distance'].sum()
-                card_df.loc[21] = ['OUT', par_out, None, dist_out]
-            if hole == 18:
-                par_in = card_df['Par'].sum() - (par_out*2)
-                dist_in = card_df['Distance'].sum() - (dist_out*2)
-                card_df.loc[22] = ['IN', par_in, None, dist_in]
-                
-                par_tot = par_out + par_in
-                dist_tot = dist_out + dist_in
-                card_df.loc[23] = ['TOT', par_tot, None, dist_tot]
-                #print(card_df)
+        card_df.loc[10] = ['OUT', None, None, None]
+
+        # IN
+        for hole in range(10,19):
+            index = hole + 1            
+            par = df[f't{hole}_par'].tolist()[0]
+            stroke = df[f't{hole}_stroke'].tolist()[0]
+            distance = df[f't{hole}_distance'].tolist()[0]
+            card_df.loc[index] = [str(hole), par, stroke, distance]
+        card_df.loc[20] = ['IN', None, None, None]
+
+        if not card_df['Par'].hasnans:
+            par_out = sum(card_df['Par'].tolist()[:9])
+            par_in = sum(card_df['Par'].tolist()[9:])
+            par_tot = card_df['Par'].sum()
+
+        if not card_df['Distance'].hasnans:
+            dist_out = sum(card_df['Distance'].tolist()[:9])
+            dist_in = sum(card_df['Distance'].tolist()[9:])
+            dist_tot = card_df['Distance'].sum()
+        
+        card_df.loc[10] = ['OUT', par_out, None, dist_out]      
+        card_df.loc[20] = ['IN', par_in, None, dist_in]
+        card_df.loc[21] = ['TOT', par_tot, None, dist_tot]
+        print(card_df)
         return card_df
                 
     def update(self):
         changes = st.session_state.course_tee_data
+        #print(self.card_df)
         print(changes)        
         edited_rows = changes.get("edited_rows", {})        
         for index, updates in edited_rows.items():
             for column, value in updates.items():
-                self.card_df.at[int(index+1), column] = value                
+                #print(f'index:{index} column:{column} value:{value}')
+                self.card_df.at[str(index+1), column] = str(value)
+                
                 if (index+1) not in [10,20,21]:
                     print(f'index={index+1} column={column.lower()}')
                     if (index+1) <= 9: hole = index + 1

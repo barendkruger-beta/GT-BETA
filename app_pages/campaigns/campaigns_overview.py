@@ -36,19 +36,6 @@ def navigate(sel, page):
     st.session_state.page = page    
     st.rerun()
 
-@st.dialog("Export")
-def export_sql():
-    #st.session_state.campaign = None
-    st.text(body='Do you want to export the SQL database?')
-    if st.button(label='Prepare download', key='sql_export'):
-        filename = sql.export_sql()
-        print(filename)
-        with open(filename, "rb") as f:
-        #    file = f.read()
-            #if st.download_button(label='Download', data=f, file_name=filename, icon=':material/download:', on_click="ignore"):
-            #    st.rerun()
-            pass
-        #st.rerun()
 
 # Populate page       
 st.subheader("Campaigns")
@@ -77,7 +64,7 @@ if len(event.selection['rows']):
 elif len(event.selection['cells']):
     id = df.iloc[event.selection['cells'][0][0]]['id']
 if id is not None:
-    print('ID is not none')
+    #print('ID is not none')
     sel = df[df['id'] == id]
     if col.button(label='', icon=':material/book_4:'):
         navigate(sel, detail_page)
@@ -90,7 +77,7 @@ else:
 if st.user.email == 'barendkruger@gmail.com':
     if st.button(label='Download DB', key='sql_export'):
             filename = sql.export_sql()
-            print(filename)
+            #print(filename)
             with open(filename, "rb") as f:
                 file = f.read()
                 st.download_button(label='Download', data=f, file_name=filename, icon=':material/download:', on_click="ignore")
