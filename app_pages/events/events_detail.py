@@ -1002,7 +1002,7 @@ class Individuals():
             
  
 # Populate page 
-st.subheader(f"Event: {st.session_state.event['name'].tolist()[0]}")
+con = st.container(horizontal=True, vertical_alignment='center')
 
 st_details = EventDetails(df=st.session_state.event)
                       
@@ -1013,3 +1013,10 @@ st_individuals = Individuals(event_df=st.session_state.event)
 st_matches = EventMatches(event_df=st.session_state.event)
 
 st_groups_participants = EventGroupParticipants(event_df=st.session_state.event)
+
+with con:
+    if st.button(label='', icon=':material/arrow_back:'):
+        st.session_state.event = None
+        st.session_state.page = st_details.parent_page
+        st.rerun()
+    st.subheader(f"Event: {st.session_state.event['name'].tolist()[0]}")

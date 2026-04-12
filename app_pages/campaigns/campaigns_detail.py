@@ -394,10 +394,17 @@ class CampaignGroupParticipants():
             st.rerun()
 
 # Populate page 
-st.subheader(f"Campaign: {st.session_state.campaign['name'].tolist()[0]}")
+con = st.container(horizontal=True, vertical_alignment='center')
 
 st_details = CampaignDetails(df=st.session_state.campaign)
 
 st_competitions = CampaignCompetitions(campaign_df=st.session_state.campaign)
 
 st_groups_participants = CampaignGroupParticipants(campaign_df=st.session_state.campaign)
+
+with con:
+    if st.button(label='', icon=':material/arrow_back:'):
+        st.session_state.campaign = None
+        st.session_state.page = st_details.parent_page
+        st.rerun()
+    st.subheader(f"Campaign: {st.session_state.campaign['name'].tolist()[0]}")

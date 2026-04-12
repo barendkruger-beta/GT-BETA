@@ -120,8 +120,15 @@ class CourseCourseTees():
 
 
 # Populate page 
-st.subheader(f"Course: {st.session_state.course['name'].tolist()[0]}")
+con = st.container(horizontal=True, vertical_alignment='center')
 
 st_details = CourseDetails(df=st.session_state.course)
 
 st_course_tees = CourseCourseTees(course_df=st.session_state.course)
+
+with con:
+    if st.button(label='', icon=':material/arrow_back:'):
+        st.session_state.course = None
+        st.session_state.page = st_details.parent_page
+        st.rerun()
+    st.subheader(f"Course: {st.session_state.course['name'].tolist()[0]}")

@@ -971,7 +971,7 @@ class Eclectic():
 
 
 # Populate page 
-st.subheader(f"Competitions: {st.session_state.competition['name'].tolist()[0]}")
+con = st.container(horizontal=True, vertical_alignment='center')
 
 st_details = CompetitionDetails(df=st.session_state.competition)
 
@@ -983,3 +983,10 @@ st_matches = CompetitionMatches(competition_df=st.session_state.competition)
 
 st_eclectic = Eclectic(st_individuals)
 st_groups_participants = CompetitionGroupParticipants(competition_df=st.session_state.competition)
+
+with con:
+    if st.button(label='', icon=':material/arrow_back:'):
+        st.session_state.competition = None
+        st.session_state.page = st_details.parent_page
+        st.rerun()
+    st.subheader(f"Competitions: {st.session_state.competition['name'].tolist()[0]}")

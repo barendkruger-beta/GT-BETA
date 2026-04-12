@@ -14,7 +14,7 @@ class CourseTeeDetails():
         self.df_sql = sql.course_tees()
         self.df = df
         df_id = df['id'].tolist()[0]
-        self.parent_page = "app_pages/course_tees/course_tees_overview.py"
+        self.parent_page = "app_pages/courses/courses_detail.py"
         if self.df is not None:
             with self.obj:
                 st_name = st.text_input('Name', key=f'course_tee_details_name', value=f'{self.df['name'].tolist()[0]}')
@@ -159,8 +159,15 @@ class CourseTeeHoles():
         
         
 # Populate page 
-st.subheader(f"Tee: {st.session_state.course_tee['name'].tolist()[0]}")
+con = st.container(horizontal=True, vertical_alignment='center')
 
 st_details = CourseTeeDetails(df=st.session_state.course_tee)
 
 st_course_tee_holes = CourseTeeHoles(df=st.session_state.course_tee)
+
+with con:
+    if st.button(label='', icon=':material/arrow_back:'):
+        st.session_state.course_tee = None
+        st.session_state.page = st_details.parent_page
+        st.rerun()
+    st.subheader(f"Tee: {st.session_state.course_tee['name'].tolist()[0]}")
