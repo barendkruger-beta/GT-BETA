@@ -211,7 +211,7 @@ class EventScoringCards():
                 sel = self.scoring_cards_df[self.scoring_cards_df['id'] == id]
                 col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card", disabled=True)
                 if col.button(label='', icon=':material/book_4:', key=f"event[{event_id}]_open_scoring_card"): self.open(sel, self.child_page)
-                if col.button(label='', icon=':material/edit:', key=f"event[{event_id}]_edit_scoring_card"): self.edit(scoring_card_df=sel, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
+                if col.button(label='', icon=':material/edit:', key=f"event[{event_id}]_edit_scoring_card", disabled=not st.session_state.global_admin): self.edit(scoring_card_df=sel, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
                 if col.button(label='', icon=':material/arrow_upward:', disabled=not st.session_state.global_admin): self.move(sel=sel, up=True)
                 if col.button(label='', icon=':material/arrow_downward:', disabled=not st.session_state.global_admin): self.move(sel=sel, down=True)
                 if col.button(label='', icon=':material/delete:', key=f"event[{event_id}]_remove_scoring_card", disabled=not st.session_state.global_admin): self.remove(scoring_card_df=sel)
@@ -336,9 +336,14 @@ class EventScoringCards():
             st.rerun()
 
     # Remove function
+    @st.dialog("Delete Scoring Card")
     def remove(self, scoring_card_df=None):
-        self.scoring_cards_sql.delete(id=scoring_card_df['id'].tolist()[0])
-        st.rerun()
+        st.text('Are you sure you want to delete the score card?\nThis wall delete all scored holes and matches')
+        if st.button('Yes'):
+            self.scoring_cards_sql.delete(id=scoring_card_df['id'].tolist()[0])
+            st.rerun()
+        if st.button('No'):
+            st.rerun()
     
     # Move item up or down
     def move(self, sel, up=None, down=None):
@@ -466,7 +471,7 @@ class EventMatches():
         with exp_matches:
             col = st.container(horizontal=True, width='stretch')
             with col:
-                if st.button(label='', icon=':material/add_2:', key="add_match"): self.add(event_id=self.event_df['id'].tolist()[0],
+                if st.button(label='', icon=':material/add_2:', key="add_match", disabled=not st.session_state.global_admin): self.add(event_id=self.event_df['id'].tolist()[0],
                                                                all_groups_df=all_groups_df,
                                                                all_participants_df=all_participants_df)
                 #if st.button(label="Refresh", key='event_matches_refresh_button'): st.rerun()
@@ -739,7 +744,7 @@ class EventGroupParticipants():
                 )
         
         # Remove button
-        if not pos_assigned_participants_df.empty:    
+        if not pos_assigned_participants_df.empty and st.session_state.global_admin:    
             if len(assigned_participants.selection['rows']):
                 participants_ids = pos_assigned_participants_df.iloc[assigned_participants.selection['rows']]['id'].tolist()
                 participants_sels = pos_assigned_participants_df.query(f'id in {participants_ids}')
@@ -752,7 +757,7 @@ class EventGroupParticipants():
             exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
         
         # Add button        
-        if not pos_unassigned_participants_df.empty:
+        if not pos_unassigned_participants_df.empty and st.session_state.global_admin:
             if len(unassigned_participants.selection['rows']):# and len(all_groups.selection['rows']):
                 participants_ids = pos_unassigned_participants_df.iloc[unassigned_participants.selection['rows']]['id'].tolist()
                 participants_sels = pos_unassigned_participants_df.query(f'id in {participants_ids}')

@@ -40,7 +40,7 @@ st.subheader("Courses")
 
 col = st.container(horizontal=True, width='stretch')
 with col:
-    if st.button("Add"): add()
+    if st.button(label='', icon=':material/add_2:', disabled=not st.user.email == 'barendkruger@gmail.com'): add()
 
 column_config = {key: None for key in df.columns.to_list()}
 column_config['name'] = st.column_config.TextColumn(label='Name')
@@ -59,11 +59,11 @@ if len(event.selection['rows']):
     selected_row = event.selection['rows'][0]
     id = df.iloc[selected_row]['id']
     sel = df[df['id'] == id]
-    if col.button("Open"):
+    if col.button(label='', icon=':material/book_4:'):
         open(sel, detail_page)
         pass
 else:
-    col.button("Open", disabled=True)
+    col.button(label='', icon=':material/book_4:', disabled=True)
     pass
 
 st.session_state.course = None

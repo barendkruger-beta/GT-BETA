@@ -22,11 +22,12 @@ class CourseDetails():
                 st_description = st.text_area('Description', key=f'course_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}')
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'course_details_{df_id}_active')
                 buttons_area = st.container(horizontal=True)
-                with buttons_area:
-                    if st.button(label='Update', key='course_details_update'):
-                        self.update(name=st_name, description=st_description, active=st_active)
-                    if st.button(label='Delete', key='course_details_delete'):
-                        self.delete()                        
+                if st.user.email == 'barendkruger@gmail.com':
+                    with buttons_area:
+                        if st.button(label='', icon=':material/check:', key='course_details_update'):
+                            self.update(name=st_name, description=st_description, active=st_active)
+                        if st.button(label='', icon=':material/delete:', key='course_details_delete'):
+                            self.delete()                        
     
     def update(self, name=None, description=None, active=None):
         if self.df is not None:
@@ -72,7 +73,7 @@ class CourseCourseTees():
             col = st.container(horizontal=True, width='stretch')
 
             with col:
-                if st.button("Add"): self.add(course_df['id'].tolist()[0])
+                if st.button(label='', icon=':material/add_2:', disabled=not st.user.email == 'barendkruger@gmail.com'): self.add(course_df['id'].tolist()[0])
 
             column_config = {key: None for key in self.course_tees_df.columns.to_list()}
             column_config['name'] = 'Name'
@@ -93,10 +94,10 @@ class CourseCourseTees():
                 selected_row = event.selection['rows'][0]
                 id = self.course_tees_df.iloc[selected_row]['id']
                 sel = self.course_tees_df[self.course_tees_df['id'] == id]
-                if col.button("Open"):
+                if col.button(label='', icon=':material/book_4:'):
                     self.open(sel, self.child_page)
             else:
-                col.button("Open", disabled=True)
+                col.button(label='', icon=':material/book_4:', disabled=True)
                 
     # Add dialog
     @st.dialog("Add")

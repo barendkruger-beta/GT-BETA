@@ -111,25 +111,26 @@ class ScoringCardDetails():
         self.parent_page = "app_pages/events/events_detail.py"
         if self.df is not None:
             with self.obj:
-                st_name = st.text_input('Name', key=f'scoring_card_details_{df_id}_name', value=f'{self.df['name'].tolist()[0]}')
-                st_description = st.text_area('Description', key=f'scoring_card_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}')
-                st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'scoring_card_details_{df_id}_active')
+                st_name = st.text_input('Name', key=f'scoring_card_details_{df_id}_name', value=f'{self.df['name'].tolist()[0]}', disabled=not st.session_state.global_admin)
+                st_description = st.text_area('Description', key=f'scoring_card_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}', disabled=not st.session_state.global_admin)
+                st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'scoring_card_details_{df_id}_active', disabled=not st.session_state.global_admin)
                 con = st.container(horizontal=True)
                 df_date = self.df['date'].tolist()[0]
                 #return
                 #if df_date is not None: df_date = date.fromisoformat(df_date)
                 #if df_date is None: df_date = 'today'
-                st_date = con.date_input('Date', format='YYYY-MM-DD', value=df_date, on_change=self.update_date, key='sc_date')
-                st_slot = con.segmented_control(label='Field', options=['AM', 'PM'], default=f'{self.df['slot'].tolist()[0]}')
+                st_date = con.date_input('Date', format='YYYY-MM-DD', value=df_date, on_change=self.update_date, key='sc_date', disabled=not st.session_state.global_admin)
+                st_slot = con.segmented_control(label='Field', options=['AM', 'PM'], default=f'{self.df['slot'].tolist()[0]}', disabled=not st.session_state.global_admin)
                 buttons_area = st.container(horizontal=True)
-                with buttons_area:
-                    if st.button(label='', icon=':material/check:', key='scoring_card_details_update'):
-                        if st.session_state.sc_date is not None:
-                            self.update(name=st_name, description=st_description, active=st_active, date=f"'{st.session_state.sc_date}'", slot=st_slot)
-                        else: st.rerun()
-                    if st.button(label='', icon=':material/delete:', key='scoring_card_details_delete'):
-                        self.delete()
-                        
+                if st.session_state.global_admin:
+                    with buttons_area:
+                        if st.button(label='', icon=':material/check:', key='scoring_card_details_update'):
+                            if st.session_state.sc_date is not None:
+                                self.update(name=st_name, description=st_description, active=st_active, date=f"'{st.session_state.sc_date}'", slot=st_slot)
+                            else: st.rerun()
+                        if st.button(label='', icon=':material/delete:', key='scoring_card_details_delete'):
+                            self.delete()
+                            
     def update_date(self):
         self.df_date = str(st.session_state.sc_date)
         
@@ -882,7 +883,7 @@ class ScoringCardGroupParticipants():
                             #on_change=hole_data_update
                             )
                 #print(pos_assigned_participants_df)
-                if st.form_submit_button(label='', icon=':material/check:'):
+                if st.form_submit_button(label='', icon=':material/check:', disabled=not st.session_state.global_admin):
                     participants_form_update()
                 
                 #print(pos_assigned_participants_df['course_tee_id'])
@@ -915,7 +916,7 @@ class ScoringCardGroupParticipants():
                 )
                     
         # Add button        
-        if not pos_unassigned_participants_df.empty:
+        if not pos_unassigned_participants_df.empty and st.session_state.global_admin:
             if len(unassigned_participants.selection['rows']):# and len(all_groups.selection['rows']):
                 participants_ids = pos_unassigned_participants_df.iloc[unassigned_participants.selection['rows']]['id'].tolist()
                 participants_sels = pos_unassigned_participants_df.query(f'id in {participants_ids}')
@@ -1200,7 +1201,7 @@ class ScoringCardsDisplay():
                 column_config=column_config,
                 hide_index=True,)
             
-            if st.form_submit_button(label='', icon=':material/check:'):
+            if st.form_submit_button(label='', icon=':material/check:', disabled=not st.session_state.global_admin):
                 form_update()
 
     def match_scores(self, match_df=None, hole_number=None):

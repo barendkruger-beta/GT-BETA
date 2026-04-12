@@ -106,8 +106,8 @@ class CompetitionEvents():
                 sel = self.events_df[self.events_df['id'] == id]
                 col.button(label='', icon=':material/add_2:', disabled=True)
                 if col.button(label='', icon=':material/book_4:'): self.open(sel, self.child_page)                    
-                if col.button(label='', icon=':material/arrow_upward:'): self.move(sel=sel, up=True)
-                if col.button(label='', icon=':material/arrow_downward:'): self.move(sel=sel, down=True)
+                if col.button(label='', icon=':material/arrow_upward:', disabled=not st.session_state.global_admin): self.move(sel=sel, up=True)
+                if col.button(label='', icon=':material/arrow_downward:', disabled=not st.session_state.global_admin): self.move(sel=sel, down=True)
             else:
                 if col.button(label='', icon=':material/add_2:'): self.add(self.competition_df['id'].tolist()[0])
                 col.button(label='', icon=':material/book_4:', disabled=True)

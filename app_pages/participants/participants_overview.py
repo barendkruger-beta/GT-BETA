@@ -19,7 +19,6 @@ class ParticipantsOverview():
         with st_con:
             st_con_buttons = st.container(border=False, horizontal=True)
             
-
             column_config = {key: None for key in df.columns.to_list()}
             column_config['name'] = st.column_config.TextColumn(label='Name')
             column_config['description'] = st.column_config.TextColumn(label='Description')
@@ -43,7 +42,7 @@ class ParticipantsOverview():
                 if st_con_buttons.button(label='', icon=':material/book_4:'):
                     self.open(index=index, df=df)
             else:
-                if st_con_buttons.button(label='', icon=':material/add_2:'): self.add()
+                if st_con_buttons.button(label='', icon=':material/add_2:', disabled=not st.user.email == 'barendkruger@gmail.com'): self.add()
                 st_con_buttons.button(label='', icon=':material/book_4:', disabled=True)
                     
     # Add dialog

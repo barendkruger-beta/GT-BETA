@@ -17,18 +17,18 @@ class Pages():
         scoring_cards_page = st.Page('app_pages/scoring_cards/scoring_cards_overview.py', title='Scoring Cards')
 
         self.stat_pages = { 
-                'Data': [
+                'General': [
                     campaigns_page,
                     courses_page,
                     groups_page,
                     participants_page,
                 ],
-                'Tables': [
-                    competitions_page,
-                    events_page,
-                    scoring_cards_page,
-                    course_tees_page,
-                    ],
+                #'Tables': [
+                    #competitions_page,
+                    #events_page,
+                    #scoring_cards_page,
+                    #course_tees_page,
+                #    ],
                 }
 
     def dyn_pages_refresh(self):

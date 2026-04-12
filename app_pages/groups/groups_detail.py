@@ -22,11 +22,12 @@ class GroupDetails():
                 st_description = st.text_area('Description', key=f'course_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}')
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'course_details_{df_id}_active')
                 buttons_area = st.container(horizontal=True)
-                with buttons_area:
-                    if st.button(label='Update', key='group_details_update'):
-                        self.update(name=st_name, description=st_description, active=st_active)
-                    if st.button(label='Delete (WIP)', key='group_details_delete', disabled=True):
-                        self.delete()                        
+                if st.user.email == 'barendkruger@gmail.com':
+                    with buttons_area:
+                        if st.button(label='', icon=':material/check:', key='group_details_update'):
+                            self.update(name=st_name, description=st_description, active=st_active)
+                        if st.button(label='WIP', icon=':material/delete:', key='group_details_delete', disabled=True):
+                            self.delete()                        
     
     @st.dialog(title='Update confirmation')
     def update(self, name=None, description=None, active=None):
