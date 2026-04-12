@@ -257,7 +257,7 @@ class CampaignGroupParticipants():
                 column_config = {key: None for key in pos_assigned_participants_df.columns.to_list()}
                 column_config['name'] = 'Name'
                 column_config['description'] = 'Description'
-                column_config['is_admin'] = 'Campaign Admin'
+                column_config['is_admin'] = st.column_config.CheckboxColumn('Campaign Admin')
                 if not pos_assigned_participants_df.empty:
                     assigned_participants = st.dataframe(
                         pos_assigned_participants_df,
@@ -299,10 +299,10 @@ class CampaignGroupParticipants():
                 if len(unassigned_groups.selection['rows']):
                     ids = pos_unassigned_groups_df.iloc[unassigned_groups.selection['rows']]['id'].tolist()
                     sels = pos_unassigned_groups_df.query(f'id in {ids}')
-                    if exp_unassigned_groups.button("Add", key="add_groups", width='stretch'):
+                    if exp_unassigned_groups.button(label='', icon=':material/add_2:', key="add_groups"):
                         self.add_groups(selection=sels)
                 else:
-                    exp_unassigned_groups.button("Add", key="add_groups", disabled=True, width='stretch')
+                    exp_unassigned_groups.button(label='', icon=':material/add_2:', key="add_groups", disabled=True)
             #else: 
             #    exp_unassigned_groups.button("Add", key="add_groups", disabled=True, width='stretch')
             
@@ -310,10 +310,10 @@ class CampaignGroupParticipants():
                 if len(assigned_groups.selection['rows']):
                     ids = pos_assigned_groups_df.iloc[assigned_groups.selection['rows']]['id'].tolist()
                     sels = pos_assigned_groups_df.query(f'id in {ids}')
-                    if exp_assigned_groups.button("Remove", key="remove_groups", width='stretch'):
+                    if exp_assigned_groups.button(label='', icon=':material/delete:', key="remove_groups"):
                         self.remove_groups(selection=sels)
                 else:
-                    exp_assigned_groups.button("Remove", key="remove_groups", disabled=True, width='stretch')
+                    exp_assigned_groups.button(label='', icon=':material/delete:', key="remove_groups", disabled=True)
             #else:
             #    exp_assigned_groups.button("Remove", key="remove_groups", disabled=True, width='stretch')
             
@@ -321,23 +321,27 @@ class CampaignGroupParticipants():
                 if len(unassigned_participants.selection['rows']):
                     ids = pos_unassigned_participants_df.iloc[unassigned_participants.selection['rows']]['id'].tolist()
                     sels = pos_unassigned_participants_df.query(f'id in {ids}')
-                    if exp_unassigned_participants.button("Add", key="add_participants", width='stretch'):
+                    if exp_unassigned_participants.button(label='', icon=':material/add_2:', key="add_participants"):
                         self.add_participants(selection=sels)
                 else:
-                    exp_unassigned_participants.button("Add", key="add_participants", disabled=True, width='stretch')
+                    exp_unassigned_participants.button(label='', icon=':material/add_2:', key="add_participants", disabled=True)
             #else:
             #    exp_unassigned_participants.button("Add", key="add_participants", disabled=True, width='stretch')
             
+            con = exp_assigned_participants.container(horizontal=True) 
             if not pos_assigned_participants_df.empty and global_admin:
                 if len(assigned_participants.selection['rows']):
                     ids = pos_assigned_participants_df.iloc[assigned_participants.selection['rows']]['id'].tolist()
                     sels = pos_assigned_participants_df.query(f'id in {ids}')
-                    if exp_assigned_participants.button("Remove", key="remove_participants", width='stretch'):
+                    if con.button(label='', icon=':material/edit:', key="edit_participant"):
+                        self.edit_participant(selection=sels)
+                    if con.button(label='', icon=':material/delete:', key="remove_participants"):
                         self.remove_participants(selection=sels)
                 else:
-                    exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
+                    con.button(label='', icon=':material/edit:', key="edit_participant", disabled=True)
+                    con.button(label='', icon=':material/delete:', key="remove_participants", disabled=True)
             #else:
-            #    exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
+            #    con.button("Remove", key="remove_participants", disabled=True, width='stretch')
           
     def add_groups(self, selection):
         fields = selection.columns.tolist()
@@ -360,8 +364,12 @@ class CampaignGroupParticipants():
         fields[fields.index('id')] = 'participant_id'
         fields[fields.index('name')] = 'name'
         fields.append('campaign_id')
+        fields.append('is_admin')
+        #print(fields)
         for entry in selection.to_numpy().tolist():
             entry.append(self.campaign_df['id'].tolist()[0])
+            entry.append(True)
+            #print(entry)            
             self.participants_sql.add(fields=fields, values=entry)
         st.rerun()
     
@@ -370,6 +378,20 @@ class CampaignGroupParticipants():
         for entry in selection.to_numpy().tolist():
             self.participants_sql.delete(entry[id_index])
         st.rerun()
+
+    @st.dialog(title='Edit campaign participant')
+    def edit_participant(self, selection):
+        #print(selection)
+        participant_id = selection['id'].tolist()[0]
+        st_description = st.text_input(label='Description', value=selection['description'].tolist()[0])
+        st_is_admin = st.toggle(label='Administrator', value=selection['is_admin'].tolist()[0])
+
+        if st.button("Update"):
+            fields = ["description", "is_admin"]
+            values = [st_description, st_is_admin]
+            self.participants_sql.update(id=participant_id, fields=fields, values=values)
+            #print(f'ID to update: {participant_id}\nValues:{values}')
+            st.rerun()
 
 # Populate page 
 st.subheader(f"Campaign: {st.session_state.campaign['name'].tolist()[0]}")

@@ -144,7 +144,7 @@ class ScoringCardDetails():
             st.session_state.scoring_card = df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
             st.rerun()
             
-    @st.dialog(title='Delete confirmation')        
+    @st.dialog(title='Delete confirmation')
     def delete(self):
         st.write("Are you sure you want to delete the entry?")
         area = st.container(horizontal=True, horizontal_alignment='center')
