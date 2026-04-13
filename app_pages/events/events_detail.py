@@ -285,7 +285,7 @@ class EventScoringCards():
         
         st_name = st.text_input("Name")
         st_description = st.text_input("Description")
-        st_date = st.date_input('Date', format='YYYY-MM-DD', value='today', on_change=self.update_date, key='event_sc_date')
+        st_date = st.date_input('Date', format='YYYY-MM-DD', value='today', on_change=self.update_date, key='event_sc_date', min_value='2013-01-01')
         st_course = st.selectbox("Course", options=courses_df['name'].tolist(), index=None)
         st_participants = st.multiselect("Participants", all_participants_df['name'].tolist())
         st_scorer = st.selectbox("Scorer", options=all_participants_df['name'].tolist(), index=None)
@@ -344,7 +344,7 @@ class EventScoringCards():
         #print(f"scoring_card DF = {scoring_card_df.columns.to_list()}")
         st_name = st.text_input("Name", value=scoring_card_df['name'].tolist()[0])
         st_description = st.text_input("Description", value=scoring_card_df['description'].tolist()[0])
-        st_date = st.date_input('Date', format='YYYY-MM-DD', value=scoring_card_df['date'].tolist()[0], on_change=self.update_date, key='event_sc_date')
+        st_date = st.date_input('Date', format='YYYY-MM-DD', value=scoring_card_df['date'].tolist()[0], on_change=self.update_date, key='event_sc_date', min_value='2013-01-01')
         st_course = st.selectbox("Course", options=courses_df['name'].tolist(), index=courses_df['id'].tolist().index(course_id))
         st_participants = st.multiselect("Participants", all_participants_df['name'].tolist(), default=scoring_card_participants_df['name'].tolist())
         st_scorer = st.selectbox("Scorer", options=all_participants_df['name'].tolist(), index=all_participants_df['id'].tolist().index(scorer_id))

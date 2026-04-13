@@ -880,6 +880,7 @@ class Individuals():
                 if active is True or active == 1: rounds_completed = False
             
             if rounds_completed:
+                print(board_df)
                 winning_points = board_df['Points'].max()
                 winners_df = board_df.query(f"Points == {winning_points}")
                 winner_found = False
@@ -890,8 +891,8 @@ class Individuals():
                     countout_txt = ''
                 else: # Calculate count out info if tied winners
                     points_lists = winners_df['pts_list'].tolist()
-                    #print(points_lists)
-                    for hole in range(0,18):
+                    print(points_lists)
+                    for hole in []:#range(0,18):
                         hole_pts_list = []                                        
                         max_pts = -1
                         for pts in points_lists:
@@ -918,8 +919,8 @@ class Individuals():
                             countout_txt = f' - count out on stroke hole {hole+1} with {max_pts} points'
                             break    
                         
-                winner_txt = f'{winner_name} wins with a total of {winner_points} points {countout_txt}'
-                st.text(body=winner_txt)
+                #winner_txt = f'{winner_name} wins with a total of {winner_points} points {countout_txt}'
+                #st.text(body=winner_txt)
             
             column_config = {key: None for key in board_df.columns.to_list()}
             column_config['Rank'] = st.column_config.NumberColumn(format="%d", disabled=True)
