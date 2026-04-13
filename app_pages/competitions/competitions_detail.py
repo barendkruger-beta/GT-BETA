@@ -812,6 +812,7 @@ class Individuals():
                     rounds_df = self.scoring_rounds_df.query(f"scoring_card_participant_id in @scoring_card_participant_ids")
                 #print(f'Round IDs: {rounds_df['id'].tolist()}')
                 stroke_holes = []
+
                 for round_id in rounds_df['id'].tolist():
                     round_df = rounds_df.query(f"id == {round_id}")
                     course_tee_id = round_df['course_tee_id'].tolist()[0]
@@ -829,6 +830,8 @@ class Individuals():
                 #print(f'Stroke Holes: {stroke_holes}')
                         
                 stroke_points = []
+                #if rounds_df.empty:
+                #    stroke_points.append([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
                 for index, round_id in enumerate(rounds_df['id'].tolist()):
                     round_df = rounds_df.query(f"id == {round_id}")
                     holes_df = self.scoring_holes_df.query(f"scoring_round_id == {round_id}")
@@ -850,6 +853,9 @@ class Individuals():
                 all_stroke_points.append(stroke_points_t)
                 #print(stroke_points_t)
         
+        
+        all_stroke_points = [x for x in all_stroke_points if x != []]
+        #print(f'All Stroke Points:\n{all_stroke_points}')
         all_stroke_points = [list(row) for row in zip(*all_stroke_points)]
         #print(f'All Stroke Points:\n{all_stroke_points}')
         for hole in range(0,len(all_stroke_points)):
@@ -861,7 +867,9 @@ class Individuals():
             #print(filter_str)
         #board_df = board_df.sort_values(by=filter_str, ascending=False)                
         #board_df['Rank'] = pd.Series(board_df['Points']).rank(method='min', ascending=False).astype(int).tolist()
-            
+
+        #print(filter_str)
+        #print(board_df)    
         board_df = board_df.sort_values(by=filter_str, ascending=False)
         board_df['Rank'] = pd.Series(board_df['Points']).rank(method='min', ascending=False).astype(int).tolist()
         #board_df['Rank'] = range(1,board_df['Participant ID'].count()+1)
@@ -880,7 +888,7 @@ class Individuals():
                 if active is True or active == 1: rounds_completed = False
             
             if rounds_completed:
-                print(board_df)
+                #print(board_df)
                 winning_points = board_df['Points'].max()
                 winners_df = board_df.query(f"Points == {winning_points}")
                 winner_found = False

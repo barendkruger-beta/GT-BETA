@@ -1236,15 +1236,19 @@ class ScoringCardsDisplay():
         with form:
             column_config = {
                 "Hole": st.column_config.TextColumn(label='Hole', disabled=True),
-                'S1': st.column_config.NumberColumn(label=self.participants[0].participant_df['name'].tolist()[0], format='%d'),
-                'P1': st.column_config.NumberColumn(label='Pts', format='%d', disabled=True),
-                'S2': st.column_config.NumberColumn(label=self.participants[1].participant_df['name'].tolist()[0], format='%d'),
-                'P2': st.column_config.NumberColumn(label='Pts', format='%d', disabled=True),
-                'S3': st.column_config.NumberColumn(label=self.participants[2].participant_df['name'].tolist()[0], format='%d'),
-                'P3': st.column_config.NumberColumn(label='Pts', format='%d', disabled=True),
-                'S4': st.column_config.NumberColumn(label=self.participants[3].participant_df['name'].tolist()[0], format='%d'),
-                'P4': st.column_config.NumberColumn(label='Pts', format='%d', disabled=True),
+                'S1': st.column_config.NumberColumn(label='-', format='%d', disabled=True),
+                'P1': st.column_config.NumberColumn(label='-', format='%d', disabled=True),
+                'S2': st.column_config.NumberColumn(label='-', format='%d', disabled=True),
+                'P2': st.column_config.NumberColumn(label='-', format='%d', disabled=True),
+                'S3': st.column_config.NumberColumn(label='-', format='%d', disabled=True),
+                'P3': st.column_config.NumberColumn(label='-', format='%d', disabled=True),
+                'S4': st.column_config.NumberColumn(label='-', format='%d', disabled=True),
+                'P4': st.column_config.NumberColumn(label='-', format='%d', disabled=True),
             }
+            for index, participant in enumerate(self.participants):
+                column_config[f'S{index+1}'] = st.column_config.NumberColumn(label=participant.participant_df['name'].tolist()[0], format='%d', disabled=False)
+                column_config[f'P{index+1}'] = st.column_config.NumberColumn(label='Pts', format='%d', disabled=True)
+
             st.data_editor(
                 key=f'scoring_card_bulk_update',
                 data=scorecard_df,
