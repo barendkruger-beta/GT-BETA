@@ -24,14 +24,14 @@ def add():
 # Open detail page                        
 def navigate(sel, page):
     st.session_state.campaign = sel
-    st.session_state.series = None
-    st.session_state.event = None
     st.session_state.group = None
     st.session_state.participant = None
+    st.session_state.competition = None
     st.session_state.event = None 
     st.session_state.scoring_card = None 
     st.session_state.scoring_hole = None
     st.session_state.course = None
+    st.session_state.course_tee = None
     
     st.session_state.page = page    
     st.rerun()
@@ -66,10 +66,10 @@ elif len(event.selection['cells']):
 if id is not None:
     #print('ID is not none')
     sel = df[df['id'] == id]
-    if col.button(label='', icon=':material/book_4:'):
+    if col.button(label='', icon=':material/jump_to_element:'):
         navigate(sel, detail_page)
 else:
-    col.button(label='', icon=':material/book_4:', disabled=True)
+    col.button(label='', icon=':material/jump_to_element:', disabled=True)
 
 #if st.button('SQL Export'):
 #    export_sql()

@@ -34,8 +34,66 @@ class CompetitionDetails():
             values = [name, description, active]
             sql_competition.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
             st.session_state.competition = sql_competition.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
-            st.rerun()
             
+            # Propogate events 'active'
+            competition_id = self.df['id'].tolist()[0]
+            events_sql = sql.events()
+            events_df = pd.DataFrame(events_sql.read(f"WHERE table.competition_id = {competition_id}"))
+            for event_id in events_df['id'].tolist():
+                fields = ['active']
+                values = [active]
+                events_sql.update(id=event_id, fields=fields, values=values)
+                
+                # Propogate event groups 'active'
+                event_groups_sql = sql.event_groups()
+                event_groups_df = pd.DataFrame(event_groups_sql.read(f"WHERE table.event_id = {event_id}"))
+                for event_group_id in event_groups_df['id'].tolist():
+                    fields = ['active']
+                    values = [active]
+                    event_groups_sql.update(id=event_group_id, fields=fields, values=values)
+
+                # Propogate event participants 'active'
+                event_participants_sql = sql.event_participants()
+                event_participants_df = pd.DataFrame(event_participants_sql.read(f"WHERE table.event_id = {event_id}"))
+                for event_participant_id in event_participants_df['id'].tolist():
+                    fields = ['active']
+                    values = [active]
+                    event_participants_sql.update(id=event_participant_id, fields=fields, values=values)
+                    
+                # Propogate scoring cards 'active'
+                scoring_cards_sql = sql.scoring_cards()
+                scoring_cards_df = pd.DataFrame(scoring_cards_sql.read(f"WHERE table.event_id = {event_id}"))
+                for scoring_card_id in scoring_cards_df['id'].tolist():
+                    fields = ['active']
+                    values = [active]
+                    scoring_cards_sql.update(id=scoring_card_id, fields=fields, values=values)
+
+                    # Propogate scoring card groups 'active'
+                    scoring_card_groups_sql = sql.scoring_card_groups()
+                    scoring_card_groups_df = pd.DataFrame(scoring_card_groups_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+                    for scoring_card_group_id in scoring_card_groups_df['id'].tolist():
+                        fields = ['active']
+                        values = [active]
+                        scoring_card_groups_sql.update(id=scoring_card_group_id, fields=fields, values=values)
+
+                    # Propogate scoring card participants 'active'
+                    scoring_card_participants_sql = sql.scoring_card_participants()
+                    scoring_card_participants_df = pd.DataFrame(scoring_card_participants_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+                    for scoring_card_participant_id in scoring_card_participants_df['id'].tolist():
+                        fields = ['active']
+                        values = [active]
+                        scoring_card_participants_sql.update(id=scoring_card_participant_id, fields=fields, values=values)
+
+                    # Propogate scoring rounds 'active'
+                    rounds_sql = sql.scoring_rounds()
+                    rounds_df = pd.DataFrame(rounds_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+                    for round_id in rounds_df['id'].tolist():
+                        fields = ['active']
+                        values = [active]
+                        rounds_sql.update(id=round_id, fields=fields, values=values)
+            
+            st.rerun()
+
     @st.dialog(title='Delete confirmation')        
     def delete(self):
         st.write("Are you sure you want to delete the entry?")
@@ -105,12 +163,12 @@ class CompetitionEvents():
             if id is not None:
                 sel = self.events_df[self.events_df['id'] == id]
                 col.button(label='', icon=':material/add_2:', disabled=True)
-                if col.button(label='', icon=':material/book_4:'): self.open(sel, self.child_page)                    
+                if col.button(label='', icon=':material/jump_to_element:'): self.open(sel, self.child_page)                    
                 if col.button(label='', icon=':material/arrow_upward:', disabled=not st.session_state.global_admin): self.move(sel=sel, up=True)
                 if col.button(label='', icon=':material/arrow_downward:', disabled=not st.session_state.global_admin): self.move(sel=sel, down=True)
             else:
                 if col.button(label='', icon=':material/add_2:'): self.add(self.competition_df['id'].tolist()[0])
-                col.button(label='', icon=':material/book_4:', disabled=True)
+                col.button(label='', icon=':material/jump_to_element:', disabled=True)
                 col.button(label='', icon=':material/arrow_upward:', disabled=True)
                 col.button(label='', icon=':material/arrow_downward:', disabled=True)
       

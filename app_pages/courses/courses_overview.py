@@ -59,11 +59,11 @@ if len(event.selection['rows']):
     selected_row = event.selection['rows'][0]
     id = df.iloc[selected_row]['id']
     sel = df[df['id'] == id]
-    if col.button(label='', icon=':material/book_4:'):
+    if col.button(label='', icon=':material/jump_to_element:'):
         open(sel, detail_page)
         pass
 else:
-    col.button(label='', icon=':material/book_4:', disabled=True)
+    col.button(label='', icon=':material/jump_to_element:', disabled=True)
     pass
 
 st.session_state.course = None

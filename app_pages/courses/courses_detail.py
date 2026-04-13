@@ -94,10 +94,10 @@ class CourseCourseTees():
                 selected_row = event.selection['rows'][0]
                 id = self.course_tees_df.iloc[selected_row]['id']
                 sel = self.course_tees_df[self.course_tees_df['id'] == id]
-                if col.button(label='', icon=':material/book_4:'):
+                if col.button(label='', icon=':material/jump_to_element:'):
                     self.open(sel, self.child_page)
             else:
-                col.button(label='', icon=':material/book_4:', disabled=True)
+                col.button(label='', icon=':material/jump_to_element:', disabled=True)
                 
     # Add dialog
     @st.dialog("Add")

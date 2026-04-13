@@ -144,29 +144,29 @@ class IndividualStats():
         else: return
         competitions_ids_str = ','.join([str(x) for x in competition_participants_df['competition_id'].tolist()])
         competitions_sql = sql.competitions()
-        self.competitions_df = competitions_df = pd.DataFrame(competitions_sql.read(filter=f"WHERE table.id IN ({competitions_ids_str})"))
+        self.competitions_df = competitions_df = pd.DataFrame(competitions_sql.read(filter=f"WHERE table.id IN ({competitions_ids_str}) AND table.active = 0"))
         
         # Events
         event_participants_sql = sql.event_participants()
-        event_participants_df = pd.DataFrame(event_participants_sql.read(filter=f"WHERE table.competition_participant_id IN ({competition_participants_ids_str})"))
+        event_participants_df = pd.DataFrame(event_participants_sql.read(filter=f"WHERE table.competition_participant_id IN ({competition_participants_ids_str}) AND table.active = 0"))
         if not event_participants_df.empty: event_participants_ids_str = ','.join([str(x) for x in event_participants_df['id'].tolist()])
         else: return
         event_ids_str = ','.join([str(x) for x in event_participants_df['event_id'].tolist()])
         events_sql = sql.events()
-        self.events_df = events_df = pd.DataFrame(events_sql.read(filter=f"WHERE table.id IN ({event_ids_str})"))
+        self.events_df = events_df = pd.DataFrame(events_sql.read(filter=f"WHERE table.id IN ({event_ids_str}) AND table.active = 0"))
         
         # Scoring Cards.
         scoring_card_participants_sql = sql.scoring_card_participants()
-        scoring_card_participants_df = pd.DataFrame(scoring_card_participants_sql.read(filter=f"WHERE table.event_participant_id IN ({event_participants_ids_str})"))
+        scoring_card_participants_df = pd.DataFrame(scoring_card_participants_sql.read(filter=f"WHERE table.event_participant_id IN ({event_participants_ids_str}) AND table.active = 0"))
         if not scoring_card_participants_df.empty: scoring_card_participants_ids_str = ','.join([str(x) for x in scoring_card_participants_df['id'].tolist()])
         else: return
         cards_ids_str = ','.join([str(x) for x in scoring_card_participants_df['scoring_card_id'].tolist()])
         cards_sql = sql.scoring_cards()
-        self.cards_df = cards_df = pd.DataFrame(cards_sql.read(filter=f"WHERE table.id IN ({cards_ids_str})"))
+        self.cards_df = cards_df = pd.DataFrame(cards_sql.read(filter=f"WHERE table.id IN ({cards_ids_str}) AND table.active = 0"))
         
         # Scoring Rounds
         rounds_sql = sql.scoring_rounds()
-        self.rounds_df = rounds_df = pd.DataFrame(rounds_sql.read(filter=f"WHERE table.scoring_card_participant_id in ({scoring_card_participants_ids_str})"))
+        self.rounds_df = rounds_df = pd.DataFrame(rounds_sql.read(filter=f"WHERE table.scoring_card_participant_id in ({scoring_card_participants_ids_str}) AND table.active = 0"))
         if not rounds_df.empty: rounds_ids_str = ','.join([str(x) for x in rounds_df['id'].tolist()])
         else: return
         course_tees_ids_str = ','.join([str(x) for x in rounds_df['course_tee_id'].tolist()])
@@ -395,7 +395,7 @@ class MatchStats():
         
         exp_main = st.expander("Match stats", expanded=True)
         with exp_main:
-            pass
+            st.text(body='Coming soon')
 
 
 class EclecticStats():
@@ -408,7 +408,7 @@ class EclecticStats():
         
         exp_main = st.expander("Eclectic stats", expanded=True)
         with exp_main:
-            pass
+            st.text(body='Coming soon')
 
 
 # Populate page 

@@ -6,6 +6,8 @@ from datetime import date
 
 e_num = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣']
 
+edit_permission = False
+
 class st_MatchInfo():
     sql = None
     match_df = None
@@ -58,7 +60,7 @@ class st_MatchInfo():
                 group_points.append(0)
                 holes = 0
         
-        print(f'Group points: {group_points}') 
+        #print(f'Group points: {group_points}') 
         if holes < tot_holes:
             hole_str = f'through {holes} of {tot_holes}'
         else: hole_str = ' - match complete' 
@@ -110,6 +112,19 @@ class ScoringCardDetails():
         #courses_df = sql.c
         self.parent_page = "app_pages/events/events_detail.py"
         if self.df is not None:
+            # Check if user is Admin or the Scorer for editing rights
+            event_participant_id = df['event_participant_id'].tolist()[0]
+            event_participants_sql = sql.event_participants()
+            competition_participant_id = pd.DataFrame(event_participants_sql.read(f"WHERE table.id == {event_participant_id}"))['competition_participant_id'].tolist()[0]
+            competition_participants_sql = sql.competition_participants()
+            campaign_participant_id = pd.DataFrame(competition_participants_sql.read(f"WHERE table.id == {competition_participant_id}"))['campaign_participant_id'].tolist()[0]
+            campaign_participants_sql = sql.campaign_participants()
+            participant_id = pd.DataFrame(campaign_participants_sql.read(f"WHERE table.id == {campaign_participant_id}"))['participant_id'].tolist()[0]
+            participants_sql = sql.participants()
+            participant_email = pd.DataFrame(participants_sql.read(f"WHERE table.id == {participant_id}"))['email'].tolist()[0]
+            global edit_permission
+            edit_permission = st.session_state.global_admin or st.user.email == participant_email
+            
             with self.obj:
                 st_name = st.text_input('Name', key=f'scoring_card_details_{df_id}_name', value=f'{self.df['name'].tolist()[0]}', disabled=not st.session_state.global_admin)
                 st_description = st.text_area('Description', key=f'scoring_card_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}', disabled=not st.session_state.global_admin)
@@ -119,29 +134,64 @@ class ScoringCardDetails():
                 #return
                 #if df_date is not None: df_date = date.fromisoformat(df_date)
                 #if df_date is None: df_date = 'today'
+                all_participants_sql = sql.event_participants()
+                all_participants_df = pd.DataFrame(all_participants_sql.read(filter=f"WHERE table.event_id={self.df['event_id'].tolist()[0]}"))
+                scorer_index = all_participants_df['id'].tolist().index(df['event_participant_id'].tolist()[0])
+                st_scorer = st.selectbox("Scorer", options=all_participants_df['name'].tolist(), index=scorer_index, disabled=not edit_permission)
                 st_date = con.date_input('Date', format='YYYY-MM-DD', value=df_date, on_change=self.update_date, key='sc_date', disabled=not st.session_state.global_admin)
                 st_slot = con.segmented_control(label='Field', options=['AM', 'PM'], default=f'{self.df['slot'].tolist()[0]}', disabled=not st.session_state.global_admin)
                 buttons_area = st.container(horizontal=True)
-                if st.session_state.global_admin:
+                if edit_permission:
                     with buttons_area:
-                        if st.button(label='', icon=':material/check:', key='scoring_card_details_update'):
+                        if st.button(label='', icon=':material/check:', key='scoring_card_details_update', disabled=not edit_permission):
                             if st.session_state.sc_date is not None:
-                                self.update(name=st_name, description=st_description, active=st_active, date=f"'{st.session_state.sc_date}'", slot=st_slot)
+                                self.update(name=st_name, description=st_description, active=st_active, date=f"'{st.session_state.sc_date}'", slot=st_slot, scorer=st_scorer)
                             else: st.rerun()
-                        if st.button(label='', icon=':material/delete:', key='scoring_card_details_delete'):
+                        if st.button(label='', icon=':material/delete:', key='scoring_card_details_delete', disabled=not st.session_state.global_admin):
                             self.delete()
                             
     def update_date(self):
         self.df_date = str(st.session_state.sc_date)
         
-    def update(self, name=None, description=None, active=None, date=None, slot=None):
+    def update(self, name=None, description=None, active=None, date=None, slot=None, scorer=None):
         if self.df is not None:
             df_sql = sql.scoring_cards()
-            fields = ['name', 'description', 'active', 'date', 'slot']
-            values = [name, description, active, date, slot]
-            print(date)
+            all_participants_sql = sql.event_participants()
+            all_participants_df = pd.DataFrame(all_participants_sql.read(filter=f"WHERE table.event_id={self.df['event_id'].tolist()[0]}"))
+            scorer_id = all_participants_df.query(f"name == '{scorer}'")['id'].tolist()[0]
+            fields = ['name', 'description', 'active', 'date', 'slot', 'scorer']
+            values = [name, description, active, date, slot, scorer_id]
+            #print(values)
             df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
             st.session_state.scoring_card = df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+
+            # Propogate scoring card groups 'active'
+            scoring_card_id = self.df['id'].tolist()[0]
+            scoring_card_groups_sql = sql.scoring_card_groups()
+            scoring_card_groups_df = pd.DataFrame(scoring_card_groups_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+            for scoring_card_group_id in scoring_card_groups_df['id'].tolist():
+                fields = ['active']
+                values = [active]
+                scoring_card_groups_sql.update(id=scoring_card_group_id, fields=fields, values=values)
+
+            # Propogate scoring card participants 'active'
+            scoring_card_id = self.df['id'].tolist()[0]
+            scoring_card_participants_sql = sql.scoring_card_participants()
+            scoring_card_participants_df = pd.DataFrame(scoring_card_participants_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+            for scoring_card_participant_id in scoring_card_participants_df['id'].tolist():
+                fields = ['active']
+                values = [active]
+                scoring_card_participants_sql.update(id=scoring_card_participant_id, fields=fields, values=values)
+
+            # Propogate scoring rounds 'active'
+            scoring_card_id = self.df['id'].tolist()[0]
+            rounds_sql = sql.scoring_rounds()
+            rounds_df = pd.DataFrame(rounds_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+            for round_id in rounds_df['id'].tolist():
+                fields = ['active']
+                values = [active]
+                rounds_sql.update(id=round_id, fields=fields, values=values)
+
             st.rerun()
             
     @st.dialog(title='Delete confirmation')
@@ -251,7 +301,7 @@ class ScoringCardScoring():
                             column_config=column_config,
                             #on_change=hole_data_update
                             )
-                if st.form_submit_button(label='', icon=':material/check:'):
+                if st.form_submit_button(label='', icon=':material/check:', disabled=not edit_permission):
                     hole_data_update()
             # Removed End
             
@@ -1771,7 +1821,6 @@ class ScoringCardsMatches():
 
 # Populate page 
 con = st.container(horizontal=True, vertical_alignment='center')
-
 
 st_details = ScoringCardDetails(df=st.session_state.scoring_card)
 

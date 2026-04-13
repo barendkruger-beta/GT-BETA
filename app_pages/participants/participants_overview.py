@@ -39,11 +39,11 @@ class ParticipantsOverview():
                 index = st_df.selection['cells'][0][0]
             if index is not None:
                 st_con_buttons.button(label='', icon=':material/add_2:', disabled=True)
-                if st_con_buttons.button(label='', icon=':material/book_4:'):
+                if st_con_buttons.button(label='', icon=':material/jump_to_element:'):
                     self.open(index=index, df=df)
             else:
                 if st_con_buttons.button(label='', icon=':material/add_2:', disabled=not st.user.email == 'barendkruger@gmail.com'): self.add()
-                st_con_buttons.button(label='', icon=':material/book_4:', disabled=True)
+                st_con_buttons.button(label='', icon=':material/jump_to_element:', disabled=True)
                     
     # Add dialog
     @st.dialog("Add")
