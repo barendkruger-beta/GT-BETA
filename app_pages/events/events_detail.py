@@ -1071,4 +1071,6 @@ with con:
         st.session_state.event = None
         st.session_state.page = st_details.parent_page
         st.rerun()
+    if st.button(label='', icon=':material/refresh:'):
+        st.rerun()
     st.subheader(f"Event: {st.session_state.event['name'].tolist()[0]}")
