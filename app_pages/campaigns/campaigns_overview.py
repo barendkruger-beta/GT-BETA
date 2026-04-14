@@ -42,7 +42,7 @@ st.subheader("Campaigns")
 
 col = st.container(horizontal=True, width='stretch')
 with col:
-    if st.button(label='', icon=':material/add_2:'): add()
+    if st.button(label='', icon=':material/add_2:', disabled=True): add()
 
 column_config = {key: None for key in df.columns.to_list()}
 column_config['name'] = st.column_config.TextColumn(label='Name')
