@@ -4,6 +4,238 @@ import sql
 import matplotlib
 
 
+class st_MatchInfo():
+    sql = None
+    match_df = None
+    groups_sql = None
+    groups_df = None
+    participants_sql = None
+    participants_df = None
+    title = None
+    teams = None
+    players = None
+    status = None
+    
+    def __init__(self, match_df=None):
+        self.sql = sql.matches()
+        self.match_df = match_df
+        groups_sql = self.groups_sql = sql.match_groups()
+        participants_sql = self.participants_sql = sql.match_participants()
+        scoring_holes_sql = sql.scoring_holes()
+        match_holes_sql = sql.match_holes()
+        
+        match_id = match_df['id'].tolist()[0]
+        match_name = match_df['name'].tolist()[0]
+        format_id = match_df['format_id'].tolist()[0]
+        format_name = match_df['formats_name'].tolist()[0]
+        value = match_df['value'].tolist()[0]
+        start_hole = match_df['start_hole'].tolist()[0]
+        tot_holes = match_df['holes'].tolist()[0]
+        participants_df = participants_sql.read(filter=f"WHERE table.match_id={match_id}")
+        if participants_df is not None: participants_df = participants_df.sort_values(by=['match_groups_name', 'name'])
+        self.participants_df = participants_df
+        #participants_df = participants_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by=['match_groups_name', 'name'])
+        groups_df = groups_sql.read(filter=f"WHERE table.match_id={match_id}")
+        if groups_df is not None: groups_df = groups_df.sort_values(by=['name'])
+        #groups_df = groups_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by=['name'])
+        self.groups_df = groups_df
+        
+        self.title = f':primary[**{match_name}**: {format_name}] :gray[for] :primary[{value}] :gray[({tot_holes} holes from #{start_hole})]'
+        if groups_df is not None and participants_df is not None:
+            participants_ids = participants_df['id'].tolist()
+            groups_ids = groups_df['id'].tolist()
+            
+            group_names = list()
+            group_participant_names = list()
+            group_points = list()
+            #group_participant_ids = ','.join([str(x) for x in self.groups_df['match_id'].tolist()])
+            for group_id in groups_ids:
+                # Names
+                group_names.append(groups_df.query(f'id=={group_id}')['name'].tolist()[0])
+                group_participant_names.append(participants_df.query(f'match_group_id=={group_id}')['name'].tolist())
+            
+                # Points & Holes completed
+                match_holes_df = match_holes_sql.read(filter=f"WHERE table.match_id={match_id} AND table.match_group_id={group_id}")
+                if match_holes_df is not None:
+                    if not match_holes_df.empty:
+                        points = sum(match_holes_df['points'].tolist())
+                        group_points.append(points)
+                        holes = len(match_holes_df['id'].tolist())
+                    else:
+                        group_points.append(0)
+                        holes = 0
+                else:
+                    group_points.append(0)
+                    holes = 0
+
+            if len(group_points) == 2:        
+                self.teams = f':blue[{group_names[0]}] :gray[vs] :blue[{group_names[1]}]'
+                self.players = f'{' / '.join(group_participant_names[0])} :gray[vs] {' / '.join(group_participant_names[1])}'
+                if holes < tot_holes:
+                    hole_str = f'through {holes} of {tot_holes}'
+                else: hole_str = ' - match complete' 
+                if group_points[0] > group_points[1]:
+                    delta_value = f'**:green[{group_names[0]} up {group_points[0]-group_points[1]}]** :gray[{hole_str}]'
+                elif group_points[1] > group_points[0]:
+                    delta_value = f'**:green[{group_names[1]} up {group_points[1]-group_points[0]}]** :gray[{hole_str}]'
+                else: delta_value = f'**All Square** :gray[{hole_str}]'
+                self.status = delta_value
+            else:
+                self.teams = ':gray[configure all participants]'
+                self.players = ''
+                self.status = ''
+        else:
+            self.teams = ':gray[to be assigned]'
+            self.players = ''
+            self.status = ''
+        
+        #self.st_obj(match_df=match_df, title=title, players=players, status=status)
+        return         
+            
+    def st_obj(self):
+        con = st.container(border=True, gap=None, horizontal=True)
+        with con:
+            txt_con = st.container(gap=None)
+            with txt_con:
+                st.markdown(body=f'{self.title}')
+                st.markdown(body=f':small[{self.teams}]')
+                st.markdown(body=f':small[{self.players}]')
+                st.markdown(body=f'_:small[{self.status}]_')
+            btn_con = st.container(width='content')
+            with btn_con:
+                pass
+                #if st.button(label='', icon=':material/edit:', key=f'match_edit_{self.match_df['id'].tolist()[0]}', disabled=not st.session_state.global_admin):
+                #    self.edit();
+                #if st.button(label='', icon=':material/delete:', key=f'match_delete_{self.match_df['id'].tolist()[0]}', disabled=not st.session_state.global_admin):
+                #    self.delete()
+        return con
+    
+    @st.dialog(title='Edit match')
+    def edit(self):
+        events_sql = sql.events()
+        event_df = events_sql.read(filter=f"WHERE table.id = {self.match_df['event_id'].tolist()[0]}")
+
+        event_participants_sql = sql.event_participants()
+        event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id = {event_df['id'].tolist()[0]}")
+        event_groups_sql = sql.event_groups()
+        event_groups_df = event_groups_sql.read(filter=f"WHERE table.event_id = {event_df['id'].tolist()[0]}")
+
+        match_participants_sql = sql.match_participants()
+        match_participants_df = match_participants_sql.read(filter=f"WHERE table.match_id = {self.match_df['id'].tolist()[0]}")
+        match_groups_sql = sql.match_groups()
+        match_groups_df = match_groups_sql.read(filter=f"WHERE table.match_id = {self.match_df['id'].tolist()[0]}")
+
+        formats_sql = sql.formats()
+        formats_df = formats_sql.read()
+        
+        st_name = st.text_input(label="Name", value=self.match_df['name'].tolist()[0])
+        st_description = st.text_input(label="Description", value=self.match_df['description'].tolist()[0])
+        st_con_format = st.container(horizontal=True, horizontal_alignment='distribute')
+        with st_con_format:
+            st_format = st.selectbox(label="Format", options=formats_df['name'].tolist(), index=self.match_df['format_id'].tolist()[0]-1)
+            st_value = st.text_input(label="Value", value=str(self.match_df['value'].tolist()[0]))
+        st_con_holes = st.container(horizontal=True)
+        with st_con_holes:
+            st_holes = st.segmented_control("Holes", options=[9,18], default=self.match_df['holes'].tolist()[0])
+            st_start_hole = st.segmented_control("Start", options=[1,10], default=self.match_df['start_hole'].tolist()[0])
+        if match_participants_df is not None: st_participant_default = match_participants_df['name'].tolist()
+        else: st_participant_default = None
+        st_participants = st.multiselect("Participants", options=event_participants_df['name'].tolist(), default=st_participant_default)
+          
+        if st.button("Submit"):
+            format_id = formats_df.query(f"name == '{st_format}'")['id'].tolist()[0]
+            fields = ["name", "description", "value", "holes", "start_hole", "format_id"]
+            values = [st_name, st_description, float(st_value), int(st_holes), int(st_start_hole), format_id]
+            self.sql.update(id=self.match_df['id'].tolist()[0], fields=fields, values=values)
+            self.match_df = pd.DataFrame(self.sql.read(filter=f"WHERE table.id = {self.match_df['id'].tolist()[0]}"))
+
+            self.update_groups_participants(event_participants_names=st_participants)
+            st.rerun()
+
+    def update_groups_participants(self, event_participants_names):
+        # If participants selected, update groups and participants
+        if len(event_participants_names) > 0:
+            match_id = self.match_df['id'].tolist()[0]
+            event_id = self.match_df['event_id'].tolist()[0]
+            event_participants_sql = sql.event_participants()
+            event_participants_names_str = ["'"+s+"'" for s in event_participants_names]
+            event_participants_names_str = ','.join(event_participants_names_str)
+            event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id = {event_id} AND table.name IN ({event_participants_names_str})")
+            #print(event_participants_df)
+            
+            event_groups_sql = sql.event_groups()
+            event_groups_ids_str = [str(x) for x in event_participants_df['event_group_id'].tolist()]
+            event_groups_ids_str = ','.join(event_groups_ids_str)
+            event_groups_df = event_groups_sql.read(filter=f"WHERE table.id IN ({event_groups_ids_str})")
+            #print(event_groups_df)
+            
+            # Add new groups
+            for event_group_id in event_groups_df['id'].tolist():
+                event_group_name = event_groups_df.query(f"id == {event_group_id}")['name'].tolist()[0]
+                event_group_description = event_groups_df.query(f"id == {event_group_id}")['description'].tolist()[0]
+                fields = ["name", "description", "match_id", "event_group_id"]
+                values = [event_group_name, event_group_description, match_id, event_group_id]
+                if self.groups_df is None:
+                    print('add first group')
+                    self.groups_sql.add(fields=fields, values=values)
+                elif event_group_id not in self.groups_df['event_group_id'].tolist():
+                    print('add another group')
+                    self.groups_sql.add(fields=fields, values=values)
+                self.groups_df = self.groups_sql.read(filter=f"WHERE table.match_id = {match_id}")
+                    
+            # Add new participants
+            for event_participant_id in event_participants_df['id'].tolist():
+                event_participant_name = event_participants_df.query(f"id == {event_participant_id}")['name'].tolist()[0]
+                event_participant_description = event_participants_df.query(f"id == {event_participant_id}")['description'].tolist()[0]
+                event_group_id = event_participants_df.query(f"id == {event_participant_id}")['event_group_id'].tolist()[0]
+                match_group_id = self.groups_df.query(f"event_group_id == {event_group_id}")['id'].tolist()[0]
+                fields = ["name", "description", "match_id", "match_group_id", "event_participant_id"]
+                values = [event_participant_name, event_participant_description, match_id, match_group_id, event_participant_id]
+                #print(f'Check participant [{event_participant_name}] with event_participant_id [{event_participant_id}]')
+                if self.participants_df is None:
+                    print('add first participant')
+                    self.participants_sql.add(fields=fields, values=values)
+                elif event_participant_id not in self.participants_df['event_participant_id'].tolist():
+                    print('add another participant')
+                    self.participants_sql.add(fields=fields, values=values)
+                self.participants_df = self.participants_sql.read(filter=f"WHERE table.match_id = {match_id}")
+
+            # Remove other participants
+            for event_participant_id in self.participants_df['event_participant_id'].tolist():
+                if event_participant_id not in event_participants_df['id'].tolist():
+                    print('remove participant')
+                    participant_id = self.participants_df.query(f"event_participant_id == {event_participant_id}")['id'].tolist()[0]
+                    self.participants_sql.delete(id=participant_id)
+                    self.participants_df = self.participants_sql.read(filter=f"WHERE table.match_id = {match_id}")
+
+            # Remove groups without participants
+            for match_group_id in self.groups_df['id'].tolist():
+                if match_group_id not in self.participants_df['match_group_id'].tolist():
+                    print('remove group')
+                    self.groups_sql.delete(id=match_group_id)
+                    self.groups_df = self.groups_sql.read(filter=f"WHERE table.match_id = {match_id}")
+
+        else:
+            if self.participants_df is not None:
+                # Remove all groups and participants
+                for match_group_id in self.groups_df['id'].tolist():
+                    self.groups_sql.delete(id=match_group_id)
+                    self.groups_df = None
+                    self.participants_df = None
+            
+    @st.dialog(title='Delete confirmation')
+    def delete(self):
+        st.write("Are you sure you want to delete the entry?")
+        area = st.container(horizontal=True, horizontal_alignment='center')
+        with area:
+            if st.button(label='Yes'):
+                if self.match_df is not None:
+                    self.sql.delete(id=self.match_df['id'].tolist()[0])
+                    st.rerun()
+            if st.button(label='No'):
+                st.rerun() 
+
+
 class CompetitionDetails():
     obj = None
     df = None
@@ -488,95 +720,6 @@ class CompetitionGroupParticipants():
         st.rerun()
 
 
-class st_MatchInfo():
-    sql = None
-    match_df = None
-    groups_df = None
-    title = None
-    players = None
-    status = None
-    
-    def __init__(self, match_df=None):
-        self.sql = sql.matches()
-        self.df = match_df
-        groups_sql = sql.match_groups()
-        participants_sql = sql.match_participants()
-        scoring_holes_sql = sql.scoring_holes()
-        match_holes_sql = sql.match_holes()
-        
-        match_id = match_df['id'].tolist()[0]
-        match_name = match_df['name'].tolist()[0]
-        format_id = match_df['format_id'].tolist()[0]
-        format_name = match_df['formats_name'].tolist()[0]
-        value = match_df['value'].tolist()[0]
-        tot_holes = match_df['holes'].tolist()[0]
-        participants_df = participants_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by=['match_groups_name', 'name'])
-        groups_df = groups_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by=['name'])
-        self.groups_df = groups_df
-        
-        participants_ids = participants_df['id'].tolist()
-        groups_ids = groups_df['id'].tolist()
-        
-        group_names = list()
-        group_participant_names = list()
-        group_points = list()
-        #group_participant_ids = ','.join([str(x) for x in self.groups_df['match_id'].tolist()])
-        for group_id in groups_ids:
-            # Names
-            group_names.append(groups_df.query(f'id=={group_id}')['name'].tolist()[0])
-            group_participant_names.append(participants_df.query(f'match_group_id=={group_id}')['name'].tolist())
-            
-            # Points & Holes completed
-            match_holes_df = match_holes_sql.read(filter=f"WHERE table.match_id={match_id} AND table.match_group_id={group_id}")
-            if match_holes_df is not None:
-                if not match_holes_df.empty:
-                    points = sum(match_holes_df['points'].tolist())
-                    group_points.append(points)
-                    holes = len(match_holes_df['id'].tolist())
-                else:
-                    group_points.append(0)
-                    holes = 0
-            else:
-                group_points.append(0)
-                holes = 0
-        
-        if holes < tot_holes:
-            hole_str = f'through {holes} of {tot_holes}'
-        else: hole_str = ' - match complete' 
-        if group_points[0] > group_points[1]:
-            delta_value = f'**:green[{group_names[0]} up {group_points[0]-group_points[1]}]** :gray[{hole_str}]'
-        elif group_points[1] > group_points[0]:
-            delta_value = f'**:green[{group_names[1]} up {group_points[1]-group_points[0]}]** :gray[{hole_str}]'
-        else: delta_value = f'**All Square** :gray[{hole_str}]'
-
-        self.title = f':primary[**{match_name}** ({format_name})] {group_names[0]} :gray[vs] {group_names[1]} :blue[[{value}]]'
-        self.players = f'{' / '.join(group_participant_names[0])} :gray[vs] {' / '.join(group_participant_names[1])}'
-        self.status = delta_value
-        
-        #self.st_obj(match_df=match_df, title=title, players=players, status=status)
-        return          
-            
-    def st_obj(self):
-        con = st.container(border=True, gap=None)
-        with con:
-            st.markdown(body=f'{self.title}', )
-            st.markdown(body=f':small[{self.players}]')
-            st.markdown(body=f'_:small[{self.status}]_')
-        return con
-    
-    @st.dialog(title='Delete confirmation')
-    def delete(self):
-        st.write("Are you sure you want to delete the entry?")
-        area = st.container(horizontal=True, horizontal_alignment='center')
-        with area:
-            if st.button(label='Yes'):
-                if self.df is not None:
-                    self.sql.delete(id=self.df['id'].tolist()[0])
-                    st.rerun()
-            if st.button(label='No'):
-                st.rerun() 
-
-
 class CompetitionMatches():
     obj = None
     competition_df = None
@@ -625,30 +768,35 @@ class CompetitionMatches():
         exp_matches = st.expander("Matches", expanded=False)
         with exp_matches:           
             if not self.matches_df.empty:
-                # Show overview
-                #print(self.groups_df)
                 matches_overview_df = pd.DataFrame(columns=['comp_group_id', 'event_group_id', 'match_group_id', 'Group', 'Points'])
-                event_group_ids = list(dict.fromkeys(self.groups_df['event_group_id'].tolist()))
-                event_group_names = list(dict.fromkeys(self.groups_df['event_groups_name'].tolist()))
-                group_points = list()
-                for group_id in comp_groups_df['id'].tolist():
-                    comp_event_group_df = pd.DataFrame(sql.event_groups().read(f"WHERE table.competition_group_id={group_id}"))
-                    comp_event_group_ids = comp_event_group_df['id'].tolist()
-                    comp_event_group_names = comp_event_group_df['name'].tolist()
-                    points = 0
-                    for event_group_id in event_group_ids:
-                        if event_group_id in comp_event_group_ids:
-                            points += self.groups_df.query(f"event_group_id=={event_group_id}")['value'].sum()
-                    group_points.append(points)
-                
-                #print(f'comp_groups_ids = {comp_groups_df['id'].tolist()}')
-                #print(f'event_group_names = {event_group_names}')
-                #print(f'group_points = {group_points}')
-                matches_overview_df['group_id'] = comp_groups_df['id'].tolist()
-                matches_overview_df['Group'] = comp_groups_df['name'].tolist()
-                matches_overview_df['Points'] = group_points
-                matches_overview_df = matches_overview_df.sort_values(by='Group', ascending=True)
-                
+                if not self.groups_df.empty:
+                    # Show overview
+                    print(self.groups_df)
+                    
+                    event_group_ids = list(dict.fromkeys(self.groups_df['event_group_id'].tolist()))
+                    event_group_names = list(dict.fromkeys(self.groups_df['event_groups_name'].tolist()))
+                    group_points = list()
+                    for group_id in comp_groups_df['id'].tolist():
+                        comp_event_group_df = pd.DataFrame(sql.event_groups().read(f"WHERE table.competition_group_id={group_id}"))
+                        comp_event_group_ids = comp_event_group_df['id'].tolist()
+                        comp_event_group_names = comp_event_group_df['name'].tolist()
+                        points = 0
+                        for event_group_id in event_group_ids:
+                            if event_group_id in comp_event_group_ids:
+                                points += self.groups_df.query(f"event_group_id=={event_group_id}")['value'].sum()
+                        group_points.append(points)
+                    
+                    #print(f'comp_groups_ids = {comp_groups_df['id'].tolist()}')
+                    #print(f'event_group_names = {event_group_names}')
+                    #print(f'group_points = {group_points}')
+                    matches_overview_df['group_id'] = comp_groups_df['id'].tolist()
+                    matches_overview_df['Group'] = comp_groups_df['name'].tolist()
+                    matches_overview_df['Points'] = group_points
+                    matches_overview_df = matches_overview_df.sort_values(by='Group', ascending=True)
+                else:
+                    matches_overview_df['Group'] = [None]
+                    matches_overview_df['Points'] = [None]
+
                 column_config = {key: None for key in matches_overview_df.columns.to_list()}
                 column_config['Group'] = st.column_config.TextColumn(label='Name', disabled=True)
                 column_config['Points'] = st.column_config.NumberColumn(label='Points', disabled=True)
@@ -668,21 +816,25 @@ class CompetitionMatches():
                         matches_overview_df = pd.DataFrame(columns=['group_id', 'Group', 'Points'])
                         event_match_ids = self.matches_df.query(f"event_id=={event_id}")['id'].tolist()
                         event_match_ids_str = ','.join(str(x) for x in event_match_ids)
-                        if len(event_match_ids) > 1:
-                            group_ids = list(dict.fromkeys(self.groups_df.query(f"match_id in ({event_match_ids_str})")['event_group_id'].tolist()))
-                            group_names = list(dict.fromkeys(self.groups_df.query(f"match_id in ({event_match_ids_str})")['event_groups_name'].tolist()))
+                        if not self.groups_df.empty:
+                            if len(event_match_ids) > 1:
+                                group_ids = list(dict.fromkeys(self.groups_df.query(f"match_id in ({event_match_ids_str})")['event_group_id'].tolist()))
+                                group_names = list(dict.fromkeys(self.groups_df.query(f"match_id in ({event_match_ids_str})")['event_groups_name'].tolist()))
+                            else:
+                                group_ids = list(dict.fromkeys(self.groups_df.query(f"match_id == {event_match_ids_str}")['event_group_id'].tolist()))
+                                group_names = list(dict.fromkeys(self.groups_df.query(f"match_id == {event_match_ids_str}")['event_groups_name'].tolist()))
+                            group_points = list()
+                            for group_id in group_ids:
+                                group_points.append(self.groups_df.query(f"event_group_id=={group_id}")['value'].sum())
+                            
+                            matches_overview_df['group_id'] = group_ids
+                            matches_overview_df['Group'] = group_names
+                            matches_overview_df['Points'] = group_points
+                            matches_overview_df = matches_overview_df.sort_values(by='Group', ascending=True)
                         else:
-                            group_ids = list(dict.fromkeys(self.groups_df.query(f"match_id == {event_match_ids_str}")['event_group_id'].tolist()))
-                            group_names = list(dict.fromkeys(self.groups_df.query(f"match_id == {event_match_ids_str}")['event_groups_name'].tolist()))
-                        group_points = list()
-                        for group_id in group_ids:
-                            group_points.append(self.groups_df.query(f"event_group_id=={group_id}")['value'].sum())
-                        
-                        matches_overview_df['group_id'] = group_ids
-                        matches_overview_df['Group'] = group_names
-                        matches_overview_df['Points'] = group_points
-                        matches_overview_df = matches_overview_df.sort_values(by='Group', ascending=True)
-                        
+                            matches_overview_df['Group'] = [None]
+                            matches_overview_df['Points'] = [None]
+
                         column_config = {key: None for key in matches_overview_df.columns.to_list()}
                         column_config['Group'] = st.column_config.TextColumn(label='Name', disabled=True)
                         column_config['Points'] = st.column_config.NumberColumn(label='Points', disabled=True)
