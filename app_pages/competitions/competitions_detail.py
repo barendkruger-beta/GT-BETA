@@ -924,6 +924,7 @@ class Individuals():
         
         # Calculate participant info
         board_df = pd.DataFrame(columns=['Rank', 'Participant ID', 'Name', 'Shots', 'Points', 'round_id', 'pts_list', 'rank', 'Hole'])
+        filter_str = ['Points']
         for competition_participant_id in self.competition_participants_df['id'].tolist():
             competition_participant_name = self.competition_participants_df.query(f"id == {competition_participant_id}")['name'].tolist()[0]
             event_participant_df = self.event_participants_df.query(f"competition_participant_id == {competition_participant_id}")
@@ -951,6 +952,7 @@ class Individuals():
                                 None,
                                 0,
                                 hole]
+        
         all_stroke_points = []
         for competition_participant_id in self.competition_participants_df['id'].tolist():
             competition_participant_name = self.competition_participants_df.query(f"id == {competition_participant_id}")['name'].tolist()[0]
@@ -962,6 +964,10 @@ class Individuals():
                 if not scoring_card_participant_df.empty:
                     scoring_card_participant_ids = scoring_card_participant_df['id'].tolist()
                     rounds_df = self.scoring_rounds_df.query(f"scoring_card_participant_id in @scoring_card_participant_ids")
+                else: continue
+                
+                if rounds_df.empty: continue
+                
                 #print(f'Round IDs: {rounds_df['id'].tolist()}')
                 stroke_holes = []
 
@@ -983,7 +989,8 @@ class Individuals():
                         
                 stroke_points = []
                 #if rounds_df.empty:
-                #    stroke_points.append([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+                #    stroke_points_t.append([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+                #else:
                 for index, round_id in enumerate(rounds_df['id'].tolist()):
                     round_df = rounds_df.query(f"id == {round_id}")
                     holes_df = self.scoring_holes_df.query(f"scoring_round_id == {round_id}")
@@ -995,12 +1002,18 @@ class Individuals():
                             points.append(points_df['points'].tolist()[0])
                         else: points.append(None)
                     stroke_points.append(points)
-                #print(f'Stroke Points: {stroke_points}')
+                
                 #print(f'Stroke Points: {stroke_points}')    
                 stroke_points_t = [list(i) for i in zip(*stroke_points)]
                 #print(f'Stroke Points T: {stroke_points_t}')
                 for index, points in enumerate(stroke_points_t):
-                    stroke_points_t[index] = sum(points)
+                    #print(points)
+                    #print(len(points))
+                    if points is None or None in points:
+                        stroke_points_t[index] = 0
+                    else:
+                        stroke_points_t[index] = sum(points)
+
                 #print(f'Stroke Points Summed: {stroke_points_t}')
                 all_stroke_points.append(stroke_points_t)
                 #print(stroke_points_t)
@@ -1013,7 +1026,7 @@ class Individuals():
         for hole in range(0,len(all_stroke_points)):
             board_df[f'S{hole+1}p'] = all_stroke_points[hole]
 
-        filter_str = ['Points']
+        
         for hole in range(1,19):
             filter_str.append(f'S{hole}p')
             #print(filter_str)
