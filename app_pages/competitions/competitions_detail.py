@@ -771,7 +771,7 @@ class CompetitionMatches():
                 matches_overview_df = pd.DataFrame(columns=['comp_group_id', 'event_group_id', 'match_group_id', 'Group', 'Points'])
                 if not self.groups_df.empty:
                     # Show overview
-                    print(self.groups_df)
+                    #print(self.groups_df)
                     
                     event_group_ids = list(dict.fromkeys(self.groups_df['event_group_id'].tolist()))
                     event_group_names = list(dict.fromkeys(self.groups_df['event_groups_name'].tolist()))

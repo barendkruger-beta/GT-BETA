@@ -518,12 +518,7 @@ class ScoringCardScoring():
         if not m_scoring_holes_df.empty:
             m_scoring_holes_df = m_scoring_holes_df.sort_values(['scoring_round_id'])
             if len(m_scoring_holes_df['id'].tolist()) != len(match_participants_df['id'].tolist()):
-                #print(f'm_scoring_holes_df \n{m_scoring_holes_df}')
-                #print(f'match_participants_df \n{match_participants_df}')
-                #print('hole score missing')
                 return None
-            
-        #m_scoring_holes_df = pd.DataFrame(sql.scoring_holes().read(filter=f"WHERE table.scoring_round_id IN ({m_scoring_round_ids}) AND number={hole_num}")).sort_values(['scoring_round_id'])
         #print(m_scoring_holes_df)
         if m_scoring_holes_df.empty:
             #print('holes empty')
@@ -548,9 +543,7 @@ class ScoringCardScoring():
                        'scoring_hole_shots': m_scoring_holes_df['shots'].tolist(),
                        'scoring_hole_points': m_scoring_holes_df['points'].tolist(),
                        }
-        #print(new_columns)
         m_scoring_rounds_df = m_scoring_rounds_df.sort_values(['id']).assign(**new_columns)  
-        #print(f"Scoring info\n{m_scoring_rounds_df}")
         
         # Add group info to match
         event_groups = []
@@ -1441,6 +1434,14 @@ class ScoringCardsDisplay():
         m_scoring_round_ids = ','.join([str(x) for x in m_scoring_rounds_df.sort_values(['id'])['id'].tolist()])
         
         m_scoring_holes_df = pd.DataFrame(sql.scoring_holes().read(filter=f"WHERE table.scoring_round_id IN ({m_scoring_round_ids}) AND number={hole_num}")).sort_values(['scoring_round_id'])
+        if not m_scoring_holes_df.empty:
+            m_scoring_holes_df = m_scoring_holes_df.sort_values(['scoring_round_id'])
+            if len(m_scoring_holes_df['id'].tolist()) != len(match_participants_df['id'].tolist()):
+                return None
+        #print(m_scoring_holes_df)
+        if m_scoring_holes_df.empty:
+            #print('holes empty')
+            return None
         
         # Add group info to round
         scoring_card_groups  = []
