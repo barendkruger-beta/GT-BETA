@@ -18,7 +18,7 @@ else:
     
     # Auto logout if session is older than x days
     max_days = 7
-    print(f'{st.user.to_dict()}\n\n')
+    #print(f'{st.user.to_dict()}\n\n')
     login_dt = datetime.fromtimestamp(st.user.iat)
     cur_dt = datetime.now()
     diff = cur_dt - login_dt

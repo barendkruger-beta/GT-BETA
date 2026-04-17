@@ -126,13 +126,13 @@ class CourseTeeHoles():
         card_df.loc[10] = ['OUT', par_out, None, dist_out]      
         card_df.loc[20] = ['IN', par_in, None, dist_in]
         card_df.loc[21] = ['TOT', par_tot, None, dist_tot]
-        print(card_df)
+        #print(card_df)
         return card_df
                 
     def update(self):
         changes = st.session_state.course_tee_data
         #print(self.card_df)
-        print(changes)        
+        #print(changes)        
         edited_rows = changes.get("edited_rows", {})        
         for index, updates in edited_rows.items():
             for column, value in updates.items():
@@ -140,21 +140,18 @@ class CourseTeeHoles():
                 self.card_df.at[str(index+1), column] = str(value)
                 
                 if (index+1) not in [10,20,21]:
-                    print(f'index={index+1} column={column.lower()}')
+                    #print(f'index={index+1} column={column.lower()}')
                     if (index+1) <= 9: hole = index + 1
                     else:                        
                         hole = index
                     self.df_sql.update(id=self.df['id'].tolist()[0], fields=[f't{hole}_{column.lower()}'], values=[value])
                 else:
-                    print(edited_rows)
+                    #print(edited_rows)
+                    pass
         df_id = self.df['id'].tolist()[0]
         self.df = self.df_sql.read(f"WHERE table.id={df_id}") 
         self.card_df = self.load(df=self.df)
                         
-                
-        
-        
-
         #print(self.card_df)
         
         

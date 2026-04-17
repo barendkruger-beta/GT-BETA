@@ -45,7 +45,7 @@ class GroupDetails():
                 self.df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
                 st.session_state.group = self.df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
                 
-                if st_update_all is 'All':
+                if st_update_all == 'All':
                     self.update_downstream()
                     
                 st.rerun()

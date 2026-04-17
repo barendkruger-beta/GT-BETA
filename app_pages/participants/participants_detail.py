@@ -234,7 +234,7 @@ class IndividualStats():
             holes_df.at[hole_id, 'competition_sequence'] = competition_sequence
             holes_df.at[hole_id, 'campaign_id'] = campaign_id
         
-        print(holes_df)
+        #print(holes_df)
 
         exp_main = st.expander("Individual stats", expanded=True)
         
