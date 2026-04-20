@@ -17,7 +17,13 @@ class DBList():
         df_data = []
         for f in files:
             df_name = str(f.name)
-            df_created = datetime.fromtimestamp(f.stat().st_birthtime).strftime("%Y-%m-%d %H:%M:%S")
+            #df_created = datetime.fromtimestamp(f.stat().st_birthtime).strftime("%Y-%m-%d %H:%M:%S")
+            try:
+                creation_time = f.stat().st_birthtime
+            except AttributeError:
+                # Fallback to ctime (Creation on Windows, Metadata change on Linux)
+                creation_time = f.stat().st_ctime
+            df_created = creation_time.strftime("%Y-%m-%d %H:%M:%S")
             df_path = str(f)
             df_data.append([df_name, df_created, df_path])   
 
