@@ -42,7 +42,7 @@ class ParticipantsOverview():
                 if st_con_buttons.button(label='', icon=':material/jump_to_element:'):
                     self.open(index=index, df=df)
             else:
-                if st_con_buttons.button(label='', icon=':material/add_2:', disabled=not st.user.email == 'barendkruger@gmail.com'): self.add()
+                if st_con_buttons.button(label='', icon=':material/add_2:', disabled=not st.user.email in st.secrets["superusers"]["emails"]): self.add()
                 st_con_buttons.button(label='', icon=':material/jump_to_element:', disabled=True)
                     
     # Add dialog

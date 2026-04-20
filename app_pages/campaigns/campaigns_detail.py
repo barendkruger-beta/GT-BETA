@@ -123,7 +123,7 @@ class CampaignCompetitions():
                 if col.button(label='', icon=':material/arrow_upward:', disabled=not st.session_state.global_admin): self.move(sel=sel, up=True)
                 if col.button(label='', icon=':material/arrow_downward:', disabled=not st.session_state.global_admin): self.move(sel=sel, down=True)                    
             else:
-                if col.button(label='', icon=':material/add_2:'): self.add(campaign_df['id'].tolist()[0])
+                if col.button(label='', icon=':material/add_2:', disabled=not st.session_state.global_admin): self.add(campaign_df['id'].tolist()[0])
                 col.button(label='', icon=':material/jump_to_element:', disabled=True)
                 col.button(label='', icon=':material/arrow_upward:', disabled=True)
                 col.button(label='', icon=':material/arrow_downward:', disabled=True)                

@@ -259,10 +259,12 @@ def init():
     conn.close()
     return None
 
-def export_sql():
+def export_sql(db_name=None):
     conn = connect()
     suffix = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    fname = f'db_backups/GT_{suffix}.db'
+    if db_name is None:
+        fname = f'db_backups/GT_{suffix}.db'
+    else: fname = f'db_backups/{db_name}.db'
     conn.execute(f"VACUUM INTO '{fname}'")
     conn.close()
     return fname

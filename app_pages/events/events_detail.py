@@ -411,7 +411,7 @@ class EventScoringCards():
                 if col.button(label='', icon=':material/arrow_downward:', disabled=not st.session_state.global_admin): self.move(sel=sel, down=True)
                 if col.button(label='', icon=':material/delete:', key=f"event[{event_id}]_remove_scoring_card", disabled=not st.session_state.global_admin): self.remove(scoring_card_df=sel)
             else:
-                if col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card"): self.add(event_id=event_id, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
+                if col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card", disabled=not st.session_state.global_admin): self.add(event_id=event_id, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
                 col.button(label='', icon=':material/jump_to_element:', key=f"event[{event_id}]_open_scoring_card", disabled=True)
                 col.button(label='', icon=':material/edit:', key=f"event[{event_id}]_edit_scoring_card", disabled=True)
                 col.button(label='', icon=':material/arrow_upward:', disabled=True)

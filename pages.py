@@ -16,12 +16,15 @@ class Pages():
         events_page = st.Page('app_pages/events/events_overview.py', title='Events')
         scoring_cards_page = st.Page('app_pages/scoring_cards/scoring_cards_overview.py', title='Scoring Cards')
 
+        db_page = st.Page('app_pages/db/db_overview.py', title='Database')
+
         self.stat_pages = { 
                 'General': [
                     campaigns_page,
                     courses_page,
                     groups_page,
                     participants_page,
+                    db_page,
                 ],
                 #'Tables': [
                     #competitions_page,

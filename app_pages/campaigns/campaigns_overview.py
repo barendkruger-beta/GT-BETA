@@ -74,7 +74,7 @@ else:
 #if st.button('SQL Export'):
 #    export_sql()
 
-if st.user.email == 'barendkruger@gmail.com':
+if st.user.email in st.secrets["superusers"]["emails"]:
     if st.button(label='Download DB', key='sql_export'):
             filename = sql.export_sql()
             #print(filename)

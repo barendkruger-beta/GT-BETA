@@ -26,7 +26,7 @@ class ParticipantDetails():
                 st_description = st.text_area('Description', key=f'course_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}')
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'course_details_{df_id}_active')
                 buttons_area = st.container(horizontal=True)
-                if st.user.email == 'barendkruger@gmail.com':
+                if st.user.email in st.secrets["superusers"]["emails"]:
                     with buttons_area:
                         if st.button(label='', icon=':material/check:', key='participant_details_update'):
                             self.update(name=st_name, description=st_description, active=st_active)
