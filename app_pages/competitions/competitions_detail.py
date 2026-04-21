@@ -1001,6 +1001,7 @@ class Individuals():
             for competition_participant_id in competition_participant_ids:
                 participant_comp_holes_df = comp_holes_df.query(f'competition_participant_id=={competition_participant_id}')# and par=={par}')
                 if not participant_comp_holes_df.empty: participant_comp_holes_df = participant_comp_holes_df.sort_values(['stroke', 'event_sequence', 'scoring_card_sequence'])
+                else: continue
                 df.at[competition_participant_id, 'name'] = participant_comp_holes_df['competition_participant_name'].tolist()[0]
                 df.at[competition_participant_id, 'points'] = participant_comp_holes_df['points'].sum()
                 for event_sequence in participant_comp_holes_df['event_sequence'].tolist():
@@ -1038,6 +1039,7 @@ class Individuals():
             for competition_participant_id in competition_participant_ids:
                 participant_comp_holes_df = comp_holes_df.query(f'competition_participant_id=={competition_participant_id} and par=={par}')
                 if not participant_comp_holes_df.empty: participant_comp_holes_df = participant_comp_holes_df.sort_values(['stroke', 'event_sequence', 'scoring_card_sequence'])
+                else: continue
                 df.at[competition_participant_id, 'name'] = participant_comp_holes_df['competition_participant_name'].tolist()[0]
                 df.at[competition_participant_id, 'points'] = participant_comp_holes_df['points'].sum()
                 df.at[competition_participant_id, 'average'] = participant_comp_holes_df['points'].mean()
@@ -1075,6 +1077,7 @@ class Individuals():
             for competition_participant_id in competition_participant_ids:
                 participant_comp_holes_df = comp_holes_df.query(f'competition_participant_id=={competition_participant_id} and par=={par}')
                 if not participant_comp_holes_df.empty: participant_comp_holes_df = participant_comp_holes_df.sort_values(['stroke', 'event_sequence', 'scoring_card_sequence'])
+                else: continue
                 df.at[competition_participant_id, 'name'] = participant_comp_holes_df['competition_participant_name'].tolist()[0]
                 df.at[competition_participant_id, 'points'] = participant_comp_holes_df['points'].sum()
                 df.at[competition_participant_id, 'average'] = participant_comp_holes_df['points'].mean()
@@ -1112,6 +1115,7 @@ class Individuals():
             for competition_participant_id in competition_participant_ids:
                 participant_comp_holes_df = comp_holes_df.query(f'competition_participant_id=={competition_participant_id} and par=={par}')
                 if not participant_comp_holes_df.empty: participant_comp_holes_df = participant_comp_holes_df.sort_values(['stroke', 'event_sequence', 'scoring_card_sequence'])
+                else: continue
                 df.at[competition_participant_id, 'name'] = participant_comp_holes_df['competition_participant_name'].tolist()[0]
                 df.at[competition_participant_id, 'points'] = participant_comp_holes_df['points'].sum()
                 df.at[competition_participant_id, 'average'] = participant_comp_holes_df['points'].mean()
