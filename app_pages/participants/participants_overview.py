@@ -23,6 +23,7 @@ class ParticipantsOverview():
             column_config['name'] = st.column_config.TextColumn(label='Name')
             column_config['description'] = st.column_config.TextColumn(label='Description')
             column_config['active'] = st.column_config.CheckboxColumn(label='Active')
+            df = df.sort_values(['active','name'], ascending=[False, True])
             st_df = st.dataframe(
                 key='participants_data',
                 data=df,

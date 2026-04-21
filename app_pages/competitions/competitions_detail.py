@@ -747,7 +747,7 @@ class CompetitionMatches():
         
         self.matches_sql = sql.matches()
         self.matches_df = pd.DataFrame(self.matches_sql.read(filter=f"WHERE table.event_id IN ({events_ids_str})"))
-        if not self.matches_df.empty: self.matches_df = self.matches_df.sort_values(by=['sequence','name'])
+        if not self.matches_df.empty: self.matches_df = self.matches_df.sort_values(by=['sequence','start_hole','name'])
         else: return
         matches_ids_str = ','.join(map(str, self.matches_df['id'].tolist()))
         #print(self.matches_df)
@@ -869,6 +869,9 @@ class Individuals():
     scoring_rounds_df = None
     scoring_holes_sql = None
     scoring_holes_df = None
+    course_tees_sql = None
+    course_tees_df = None
+
     child_page = None
     
     def __init__(self, competition_df=None):
@@ -896,7 +899,7 @@ class Individuals():
         # Scoring cards
         self.scoring_cards_sql = sql.scoring_cards()
         self.scoring_cards_df = pd.DataFrame(self.scoring_cards_sql.read(filter=f"WHERE table.event_id IN ({events_ids})"))
-        if not self.scoring_cards_df.empty: self.scoring_cards_df = self.scoring_cards_df.sort_values(by=['sequence', 'name'])
+        if not self.scoring_cards_df.empty: self.scoring_cards_df = cards_df = self.scoring_cards_df.sort_values(by=['sequence', 'name'])
         else: return
         scoring_cards_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_cards_df['id'].tolist()))])        
         
@@ -912,206 +915,295 @@ class Individuals():
         self.scoring_rounds_df = pd.DataFrame(self.scoring_rounds_sql.read(filter=f"WHERE table.scoring_card_participant_id IN ({scoring_card_participants_ids})"))
         if self.scoring_rounds_df.empty: return
         scoring_rounds_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_rounds_df['id'].tolist()))])
-        
+        course_tees_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_rounds_df['course_tee_id'].tolist()))])
+
         # Scoring holes
         self.scoring_holes_sql = sql.scoring_holes()
         self.scoring_holes_df = pd.DataFrame(self.scoring_holes_sql.read(filter=f"WHERE table.scoring_round_id IN ({scoring_rounds_ids})"))
         if self.scoring_holes_df.empty: return
         
-        # Course tees
-        course_tees_sql = sql.course_tees()
-        
-        
-        # Calculate participant info
-        board_df = pd.DataFrame(columns=['Rank', 'Participant ID', 'Name', 'Shots', 'Points', 'round_id', 'pts_list', 'rank', 'Hole'])
-        filter_str = ['Points']
-        for competition_participant_id in self.competition_participants_df['id'].tolist():
-            competition_participant_name = self.competition_participants_df.query(f"id == {competition_participant_id}")['name'].tolist()[0]
-            event_participant_df = self.event_participants_df.query(f"competition_participant_id == {competition_participant_id}")
-            event_participant_ids = event_participant_df['id'].tolist()
-            if not event_participant_df.empty:
-                scoring_card_participant_df = self.scoring_card_participants_df.query(f"event_participant_id in @event_participant_ids")
-                if not scoring_card_participant_df.empty:
-                    scoring_card_participant_ids = scoring_card_participant_df['id'].tolist()
-                    rounds_df = self.scoring_rounds_df.query(f"scoring_card_participant_id in @scoring_card_participant_ids")
-                    if not rounds_df.empty:
-                        round_ids = rounds_df['id'].tolist()
-                        holes_df = self.scoring_holes_df.query(f"scoring_round_id in @round_ids")
-                                                          
-                        if not holes_df.empty:
-                            shots = holes_df['shots'].sum()
-                            points = holes_df['points'].sum()
-                            hole = holes_df['points'].count()
-                            board_df.loc[competition_participant_id] = [
-                                0,
-                                competition_participant_id,
-                                competition_participant_name,
-                                shots,
-                                points,
-                                None,
-                                None,
-                                0,
-                                hole]
-        
-        all_stroke_points = []
-        for competition_participant_id in self.competition_participants_df['id'].tolist():
-            competition_participant_name = self.competition_participants_df.query(f"id == {competition_participant_id}")['name'].tolist()[0]
-            event_participant_df = self.event_participants_df.query(f"competition_participant_id == {competition_participant_id}")
-            event_participant_ids = event_participant_df['id'].tolist()
-            #print(f'Participant: {competition_participant_name}')
-            if not event_participant_df.empty:        
-                scoring_card_participant_df = self.scoring_card_participants_df.query(f"event_participant_id in @event_participant_ids")
-                if not scoring_card_participant_df.empty:
-                    scoring_card_participant_ids = scoring_card_participant_df['id'].tolist()
-                    rounds_df = self.scoring_rounds_df.query(f"scoring_card_participant_id in @scoring_card_participant_ids")
-                else: continue
-                
-                if rounds_df.empty: continue
-                
-                #print(f'Round IDs: {rounds_df['id'].tolist()}')
-                stroke_holes = []
+        # Course Tees
+        self.course_tees_sql = sql.course_tees()
+        self.course_tees_df = course_tees_df = pd.DataFrame(self.course_tees_sql.read(filter=f"WHERE table.id IN ({course_tees_ids})"))
+        courses_ids = ','.join([str(x) for x in self.course_tees_df['course_id'].tolist()])
 
-                for round_id in rounds_df['id'].tolist():
-                    round_df = rounds_df.query(f"id == {round_id}")
-                    course_tee_id = round_df['course_tee_id'].tolist()[0]
-                    course_tee_df = pd.DataFrame(course_tees_sql.read(filter=f"WHERE table.id={course_tee_id}"))
-                    #course_tee_df = self.course_tees_df.query(f"id == {course_tee_id}")
-                    strokes_df = course_tee_df.filter(regex='stroke$', axis=1)
-                    strokes_df.columns = range(1,19)
-                    index = strokes_df.index.tolist()[0]
-
-                    strokes_df = strokes_df.transpose().sort_values(by=[index])
-                    strokes_df.columns = [index]
-                    strokes_df = strokes_df.transpose()
-                    stroke_holes.append(strokes_df.columns.tolist())            
-                
-                #print(f'Stroke Holes: {stroke_holes}')
-                        
-                stroke_points = []
-                #if rounds_df.empty:
-                #    stroke_points_t.append([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
-                #else:
-                for index, round_id in enumerate(rounds_df['id'].tolist()):
-                    round_df = rounds_df.query(f"id == {round_id}")
-                    holes_df = self.scoring_holes_df.query(f"scoring_round_id == {round_id}")
-                    points = []
-                    cntr = 0
-                    for hole in stroke_holes[index]:
-                        points_df = holes_df.query(f"number == {hole}")
-                        if not points_df.empty:
-                            points.append(points_df['points'].tolist()[0])
-                        else: points.append(None)
-                    stroke_points.append(points)
-                
-                #print(f'Stroke Points: {stroke_points}')    
-                stroke_points_t = [list(i) for i in zip(*stroke_points)]
-                #print(f'Stroke Points T: {stroke_points_t}')
-                for index, points in enumerate(stroke_points_t):
-                    #print(points)
-                    #print(len(points))
-                    if points is None or None in points:
-                        stroke_points_t[index] = 0
-                    else:
-                        stroke_points_t[index] = sum(points)
-
-                #print(f'Stroke Points Summed: {stroke_points_t}')
-                all_stroke_points.append(stroke_points_t)
-                #print(stroke_points_t)
-        
-        
-        all_stroke_points = [x for x in all_stroke_points if x != []]
-        #print(f'All Stroke Points:\n{all_stroke_points}')
-        all_stroke_points = [list(row) for row in zip(*all_stroke_points)]
-        #print(f'All Stroke Points:\n{all_stroke_points}')
-        for hole in range(0,len(all_stroke_points)):
-            board_df[f'S{hole+1}p'] = all_stroke_points[hole]
-
-        
-        for hole in range(1,19):
-            filter_str.append(f'S{hole}p')
-            #print(filter_str)
-        #board_df = board_df.sort_values(by=filter_str, ascending=False)                
-        #board_df['Rank'] = pd.Series(board_df['Points']).rank(method='min', ascending=False).astype(int).tolist()
-
-        #print(filter_str)
-        #print(board_df)    
-        board_df = board_df.sort_values(by=filter_str, ascending=False)
-        board_df['Rank'] = pd.Series(board_df['Points']).rank(method='min', ascending=False).astype(int).tolist()
-        #board_df['Rank'] = range(1,board_df['Participant ID'].count()+1)
-        #for participant_id in board_df['id'].tolist():
-            
-        #column_config['rank'] = st.column_config.NumberColumn(format="%d", disabled=True)
+# --- REMOVE START ---
         exp = st.expander(label='Individual Leaderboard')
-        with exp:
-            header_con = st.container(horizontal=True, width='stretch')
-            st_extended = header_con.toggle(label='Extended', key='event_card_extended_toggle', width='content')
+# --- REMOVE END ---
+
+        comp_holes_df = pd.DataFrame()
+        comp_holes_df.index = self.scoring_holes_df['id'].tolist()
+        comp_holes_df['id'] = self.scoring_holes_df['id'].tolist()
+        comp_holes_df['number'] = self.scoring_holes_df['number'].tolist()
+        comp_holes_df['shots'] = self.scoring_holes_df['shots'].tolist()
+        comp_holes_df['points'] = self.scoring_holes_df['points'].tolist()
+        comp_holes_df['scoring_round_id'] = self.scoring_holes_df['scoring_round_id'].tolist()
+
+        comp_holes_df['scoring_card_sequence'] = None
+        comp_holes_df['scoring_card_participant_id'] = None
+        comp_holes_df['course_tee_id'] = None
+        comp_holes_df['par'] = None
+        comp_holes_df['stroke'] = None
+
+        comp_holes_df['event_participant_id'] = None
+        comp_holes_df['competition_participant_id'] = None
+        comp_holes_df['event_id'] = None
+        comp_holes_df['event_sequence'] = None
+        comp_holes_df['competition_participant_name'] = None
+
+        for id in comp_holes_df['id'].tolist():
+            # scoring_card_participant_id
+            scoring_round_id = comp_holes_df.at[id, 'scoring_round_id']
+            scoring_rounds_df = self.scoring_rounds_df.query(f"id=={scoring_round_id}")
+            if not scoring_rounds_df.empty:
+                scoring_card_id = scoring_rounds_df.at[scoring_round_id, 'scoring_card_id']
+                scoring_card_sequence = self.scoring_cards_df.at[scoring_card_id, 'sequence']
+                scoring_card_participant_id = scoring_rounds_df.at[scoring_round_id, 'scoring_card_participant_id']
+                course_tee_id = scoring_rounds_df['course_tee_id'].tolist()[0]
+                number = comp_holes_df.at[id, 'number']
+                par = course_tees_df.at[course_tee_id, f't{number}_par']
+                stroke = course_tees_df.at[course_tee_id, f't{number}_stroke']
+                event_participant_id = self.scoring_card_participants_df.at[scoring_card_participant_id, 'event_participant_id']
+                competition_participant_id = self.event_participants_df.at[event_participant_id, 'competition_participant_id']
+                event_id = self.event_participants_df.at[event_participant_id, 'event_id']
+                event_sequence = self.events_df.at[event_id, 'sequence']
+                competition_participant_name = self.competition_participants_df.at[competition_participant_id, 'name']
+
+                comp_holes_df.at[id, 'scoring_card_sequence'] = scoring_card_sequence
+                comp_holes_df.at[id, 'scoring_card_participant_id'] = scoring_card_participant_id
+                comp_holes_df.at[id, 'course_tee_id'] = course_tee_id
+                comp_holes_df.at[id, 'par'] = par
+                comp_holes_df.at[id, 'stroke'] = stroke
+                comp_holes_df.at[id, 'event_participant_id'] = event_participant_id
+                comp_holes_df.at[id, 'competition_participant_id'] = competition_participant_id
+                comp_holes_df.at[id, 'event_id'] = event_id
+                comp_holes_df.at[id, 'event_sequence'] = event_sequence
+                comp_holes_df.at[id, 'competition_participant_name'] = competition_participant_name
+        comp_holes_df = comp_holes_df.sort_values(['event_sequence', 'competition_participant_name'])
+
+        df = pd.DataFrame()
+        if not comp_holes_df.empty:
+            competition_participant_ids = list(dict.fromkeys(comp_holes_df['competition_participant_id'].tolist()))
+            df.index = competition_participant_ids
+            df['id'] = competition_participant_ids
+            df['name'] = None
+            df['points'] = None
             
-            # Show winner if rounds completed
-            rounds_completed = True
-            #print(self.scoring_rounds_df)
-            for active in self.scoring_rounds_df['active'].tolist():
-                if active is True or active == 1: rounds_completed = False
+            for event_sequence in comp_holes_df['event_sequence'].tolist():
+                df[f'Rd{event_sequence}'] = None
             
-            if rounds_completed:
-                #print(board_df)
-                winning_points = board_df['Points'].max()
-                winners_df = board_df.query(f"Points == {winning_points}")
-                winner_found = False
-                if len(winners_df['Points'].tolist()) == 1:
-                    winner_name = winners_df['Name'].tolist()[0]
-                    winner_points = winners_df['Points'].tolist()[0]
-                    winner_txt = f'{winner_name} wins with {winner_points} points'
-                    countout_txt = ''
-                else: # Calculate count out info if tied winners
-                    points_lists = winners_df['pts_list'].tolist()
-                    print(points_lists)
-                    for hole in []:#range(0,18):
-                        hole_pts_list = []                                        
-                        max_pts = -1
-                        for pts in points_lists:
-                            points = pts[hole]
-                            hole_pts_list.append(points)
-                            if points > max_pts: max_pts = points
-                        
-                        count = 0
-                        max_index = 0
-                        for index, pts in enumerate(points_lists):
-                            points = pts[hole]
-                            if points == max_pts:
-                                count += 1
-                                max_index = index
-                                
-                        
-                        if count == 1:
-                            winner_found = True
-                            winner_id = winners_df['Participant ID'].tolist()[max_index]
-                            winner_name = winners_df['Name'].tolist()[max_index]
-                            winner_points = winners_df['Points'].tolist()[max_index]
-                            board_df.loc[board_df['Participant ID']==winner_id, 'rank'] = 1
-                            board_df = board_df.sort_values(by=['rank', 'Points'], ascending=False)
-                            countout_txt = f' - count out on stroke hole {hole+1} with {max_pts} points'
-                            break    
-                        
-                #winner_txt = f'{winner_name} wins with a total of {winner_points} points {countout_txt}'
-                #st.text(body=winner_txt)
+            sort_list = ['points']
+            for stroke in range(1,19):
+                df[f'S{stroke}'] = None
+                sort_list.append(f'S{stroke}')
             
-            column_config = {key: None for key in board_df.columns.to_list()}
-            column_config['Rank'] = st.column_config.NumberColumn(format="%d", disabled=True)
-            column_config['Name'] = st.column_config.TextColumn(disabled=True)
-            #column_config['Shots'] = st.column_config.NumberColumn(format="%d", disabled=True)
-            column_config['Points'] = st.column_config.NumberColumn(format="%d", disabled=True)
-            if not rounds_completed:
-                column_config['Hole'] = st.column_config.NumberColumn(format="%d", disabled=True)
-            if st_extended:
-                #print('Showing extended info')
-                for hole in range(1,19):
-                    column_config[f'S{hole}p'] = st.column_config.NumberColumn(label=f'S{hole}', format="%d", disabled=True)
-                    
-            st.dataframe(key='individuals_competition_data',
-                        data=board_df,
-                        hide_index=True,
-                        column_config=column_config,
-                        )
+            for competition_participant_id in competition_participant_ids:
+                participant_comp_holes_df = comp_holes_df.query(f'competition_participant_id=={competition_participant_id}')# and par=={par}')
+                if not participant_comp_holes_df.empty: participant_comp_holes_df = participant_comp_holes_df.sort_values(['stroke', 'event_sequence', 'scoring_card_sequence'])
+                df.at[competition_participant_id, 'name'] = participant_comp_holes_df['competition_participant_name'].tolist()[0]
+                df.at[competition_participant_id, 'points'] = participant_comp_holes_df['points'].sum()
+                for event_sequence in participant_comp_holes_df['event_sequence'].tolist():
+                    df.at[competition_participant_id, f'Rd{event_sequence}'] = participant_comp_holes_df.query(f'event_sequence=={event_sequence}')['points'].sum()
+                stroke_list = list(dict.fromkeys(participant_comp_holes_df['stroke'].tolist()))
+                for stroke in stroke_list:
+                    df.at[competition_participant_id, f'S{stroke}'] = participant_comp_holes_df.query(f"stroke=={stroke}")['points'].sum()
+            
+            for stroke in range(1,19):
+                if all(x is None for x in df[f'S{stroke}']):
+                    df = df.drop(columns=[f'S{stroke}'])
+                    sort_list.remove(f'S{stroke}')
+            overall_df = df.sort_values(sort_list, ascending=False)
+        else: overall_df = df
+        #print(overall_df)
+
+        par = 3
+        df = pd.DataFrame()
+        if not comp_holes_df.empty:
+            competition_participant_ids = list(dict.fromkeys(comp_holes_df['competition_participant_id'].tolist()))
+            df.index = competition_participant_ids
+            df['id'] = competition_participant_ids
+            df['name'] = None
+            df['points'] = None
+            df['average'] = None
+            
+            for event_sequence in comp_holes_df['event_sequence'].tolist():
+                df[f'Rd{event_sequence}'] = None
+            
+            sort_list = ['points']
+            for stroke in range(1,19):
+                df[f'S{stroke}'] = None
+                sort_list.append(f'S{stroke}')
+            
+            for competition_participant_id in competition_participant_ids:
+                participant_comp_holes_df = comp_holes_df.query(f'competition_participant_id=={competition_participant_id} and par=={par}')
+                if not participant_comp_holes_df.empty: participant_comp_holes_df = participant_comp_holes_df.sort_values(['stroke', 'event_sequence', 'scoring_card_sequence'])
+                df.at[competition_participant_id, 'name'] = participant_comp_holes_df['competition_participant_name'].tolist()[0]
+                df.at[competition_participant_id, 'points'] = participant_comp_holes_df['points'].sum()
+                df.at[competition_participant_id, 'average'] = participant_comp_holes_df['points'].mean()
+                for event_sequence in participant_comp_holes_df['event_sequence'].tolist():
+                    df.at[competition_participant_id, f'Rd{event_sequence}'] = participant_comp_holes_df.query(f'event_sequence=={event_sequence}')['points'].sum()
+                stroke_list = list(dict.fromkeys(participant_comp_holes_df['stroke'].tolist()))
+                for stroke in stroke_list:
+                    df.at[competition_participant_id, f'S{stroke}'] = participant_comp_holes_df.query(f"stroke=={stroke}")['points'].sum()
+            
+            for stroke in range(1,19):
+                if all(x is None for x in df[f'S{stroke}']):
+                    df = df.drop(columns=[f'S{stroke}'])
+                    sort_list.remove(f'S{stroke}')
+            par3_df = df.sort_values(sort_list, ascending=False)
+        else: par3_df = df
+        #print(par3_df)
+
+        par = 4
+        df = pd.DataFrame()
+        if not comp_holes_df.empty:
+            competition_participant_ids = list(dict.fromkeys(comp_holes_df['competition_participant_id'].tolist()))
+            df.index = competition_participant_ids
+            df['id'] = competition_participant_ids
+            df['name'] = None
+            df['points'] = None
+            
+            for event_sequence in comp_holes_df['event_sequence'].tolist():
+                df[f'Rd{event_sequence}'] = None
+            
+            sort_list = ['points']
+            for stroke in range(1,19):
+                df[f'S{stroke}'] = None
+                sort_list.append(f'S{stroke}')
+            
+            for competition_participant_id in competition_participant_ids:
+                participant_comp_holes_df = comp_holes_df.query(f'competition_participant_id=={competition_participant_id} and par=={par}')
+                if not participant_comp_holes_df.empty: participant_comp_holes_df = participant_comp_holes_df.sort_values(['stroke', 'event_sequence', 'scoring_card_sequence'])
+                df.at[competition_participant_id, 'name'] = participant_comp_holes_df['competition_participant_name'].tolist()[0]
+                df.at[competition_participant_id, 'points'] = participant_comp_holes_df['points'].sum()
+                df.at[competition_participant_id, 'average'] = participant_comp_holes_df['points'].mean()
+                for event_sequence in participant_comp_holes_df['event_sequence'].tolist():
+                    df.at[competition_participant_id, f'Rd{event_sequence}'] = participant_comp_holes_df.query(f'event_sequence=={event_sequence}')['points'].sum()
+                stroke_list = list(dict.fromkeys(participant_comp_holes_df['stroke'].tolist()))
+                for stroke in stroke_list:
+                    df.at[competition_participant_id, f'S{stroke}'] = participant_comp_holes_df.query(f"stroke=={stroke}")['points'].sum()
+            
+            for stroke in range(1,19):
+                if all(x is None for x in df[f'S{stroke}']):
+                    df = df.drop(columns=[f'S{stroke}'])
+                    sort_list.remove(f'S{stroke}')
+            par4_df = df.sort_values(sort_list, ascending=False)
+        else: par4_df = df
+        #print(par4_df)
+
+        par = 5
+        df = pd.DataFrame()
+        if not comp_holes_df.empty:
+            competition_participant_ids = list(dict.fromkeys(comp_holes_df['competition_participant_id'].tolist()))
+            df.index = competition_participant_ids
+            df['id'] = competition_participant_ids
+            df['name'] = None
+            df['points'] = None
+            
+            for event_sequence in comp_holes_df['event_sequence'].tolist():
+                df[f'Rd{event_sequence}'] = None
+            
+            sort_list = ['points']
+            for stroke in range(1,19):
+                df[f'S{stroke}'] = None
+                sort_list.append(f'S{stroke}')
+            
+            for competition_participant_id in competition_participant_ids:
+                participant_comp_holes_df = comp_holes_df.query(f'competition_participant_id=={competition_participant_id} and par=={par}')
+                if not participant_comp_holes_df.empty: participant_comp_holes_df = participant_comp_holes_df.sort_values(['stroke', 'event_sequence', 'scoring_card_sequence'])
+                df.at[competition_participant_id, 'name'] = participant_comp_holes_df['competition_participant_name'].tolist()[0]
+                df.at[competition_participant_id, 'points'] = participant_comp_holes_df['points'].sum()
+                df.at[competition_participant_id, 'average'] = participant_comp_holes_df['points'].mean()
+                for event_sequence in participant_comp_holes_df['event_sequence'].tolist():
+                    df.at[competition_participant_id, f'Rd{event_sequence}'] = participant_comp_holes_df.query(f'event_sequence=={event_sequence}')['points'].sum()
+                stroke_list = list(dict.fromkeys(participant_comp_holes_df['stroke'].tolist()))
+                for stroke in stroke_list:
+                    df.at[competition_participant_id, f'S{stroke}'] = participant_comp_holes_df.query(f"stroke=={stroke}")['points'].sum()
+            
+            for stroke in range(1,19):
+                if all(x is None for x in df[f'S{stroke}']):
+                    df = df.drop(columns=[f'S{stroke}'])
+                    sort_list.remove(f'S{stroke}')
+            par5_df = df.sort_values(sort_list, ascending=False)
+        else: par5_df = df
+        #print(par5_df)
+
+        exp_overall = exp.expander(label='Overall')
+        with exp_overall:
+            overall_extended = st.toggle(label='Extended', key='competition_overall_extended_toggle', width='content')
+            self.st_overall(df=overall_df, extended=overall_extended)
+
+        exp_par3 = exp.expander(label='Par 3')
+        with exp_par3:
+            par3_extended = st.toggle(label='Extended', key='competition_par3_extended_toggle', width='content')
+            self.st_par(df=par3_df, extended=par3_extended)
+
+        exp_par4 = exp.expander(label='Par 4')
+        with exp_par4:
+            par4_extended = st.toggle(label='Extended', key='competition_par4_extended_toggle', width='content')
+            self.st_par(df=par4_df, extended=par4_extended)
+
+        exp_par5 = exp.expander(label='Par 5')
+        with exp_par5:
+            par5_extended = st.toggle(label='Extended', key='competition_par5_extended_toggle', width='content')
+            self.st_par(df=par5_df, extended=par5_extended)
+
+    def st_overall(self, key=None, df=None, extended=False): 
+        column_config = {key: None for key in df.columns.to_list()}
+        column_config['Rank'] = st.column_config.NumberColumn(format="%d", disabled=True)
+        column_config['name'] = st.column_config.TextColumn(label='Name', disabled=True)
+        #column_config['Shots'] = st.column_config.NumberColumn(format="%d", disabled=True)
+        column_config['points'] = st.column_config.NumberColumn(label='Pts', format="%d", disabled=True)
+
+        events = [event for event in df.columns if "Rd" in event]
+        for event in events:
+            column_config[event] = st.column_config.NumberColumn(label=event, format="%d", disabled=True)
+
+        if extended:
+            stroke_columns = [col for col in df.columns if "S" in col]
+            for col in stroke_columns:
+                column_config[col] = st.column_config.NumberColumn(label=col, format="%d", disabled=True)
+            #print('Showing extended info')
+            pass
+            #for hole in range(1,19):
+            #    column_config[f'S{hole}p'] = st.column_config.NumberColumn(label=f'S{hole}', format="%d", disabled=True)
+                
+        st.dataframe(key=key,
+                    data=df,
+                    hide_index=True,
+                    column_config=column_config,
+                    )
+
+    def st_par(self, key=None, df=None, extended=False):        
+        column_config = {key: None for key in df.columns.to_list()}
+        column_config['Rank'] = st.column_config.NumberColumn(format="%d", disabled=True)
+        column_config['name'] = st.column_config.TextColumn(label='Name', disabled=True)
+        #column_config['Shots'] = st.column_config.NumberColumn(format="%d", disabled=True)
+        column_config['points'] = st.column_config.NumberColumn(label='Pts', format="%d", disabled=True)
+        column_config['average'] = st.column_config.NumberColumn(label='Ave', format="%.2f", disabled=True)
+
+        events = [event for event in df.columns if "Rd" in event]
+        for event in events:
+            column_config[event] = st.column_config.NumberColumn(label=event, format="%d", disabled=True)
+
+        if extended:
+            stroke_columns = [col for col in df.columns if "S" in col]
+            for col in stroke_columns:
+                column_config[col] = st.column_config.NumberColumn(label=col, format="%d", disabled=True)
+            #print('Showing extended info')
+            pass
+            #for hole in range(1,19):
+            #    column_config[f'S{hole}p'] = st.column_config.NumberColumn(label=f'S{hole}', format="%d", disabled=True)
+                
+        st.dataframe(key=key,
+                    data=df,
+                    hide_index=True,
+                    column_config=column_config,
+                    )
+
+        # Count out by summed events
+
+        # Count out by hole difficulty
 
 
 class Eclectic():

@@ -642,7 +642,7 @@ class EventMatches():
         self.matches_sql = sql.matches()
         self.matches_df = pd.DataFrame(self.matches_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
         if not self.matches_df.empty:
-            self.matches_df = self.matches_df.sort_values(by=['sequence','name'])
+            self.matches_df = self.matches_df.sort_values(by=['sequence','start_hole', 'name'])
             matches_ids_str = ','.join(map(str, self.matches_df['id'].tolist()))
         else:
             matches_ids_str = ''

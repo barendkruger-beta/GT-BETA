@@ -4,7 +4,7 @@ import sql
 
 def highlight_max(styler, columns=None):
             for column in columns:
-                styler.highlight_max(color='darkgreen', axis=0, subset=[column])
+                styler.highlight_max(color='green', axis=0, subset=[column])
             return styler
 
 class ParticipantDetails():

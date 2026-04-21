@@ -257,8 +257,10 @@ class CampaignGroupParticipants():
                 column_config = {key: None for key in pos_assigned_participants_df.columns.to_list()}
                 column_config['name'] = 'Name'
                 column_config['description'] = 'Description'
-                column_config['is_admin'] = st.column_config.CheckboxColumn('Campaign Admin')
+                column_config['is_admin'] = st.column_config.CheckboxColumn('Admin')
+                column_config['active'] = st.column_config.CheckboxColumn('Active')
                 if not pos_assigned_participants_df.empty:
+                    pos_assigned_participants_df = pos_assigned_participants_df.sort_values(['is_admin','active','name'], ascending=[False, False, True])
                     assigned_participants = st.dataframe(
                         pos_assigned_participants_df,
                         on_select='rerun',

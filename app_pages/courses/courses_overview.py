@@ -47,12 +47,14 @@ column_config['name'] = st.column_config.TextColumn(label='Name')
 column_config['description'] = st.column_config.TextColumn(label='Description')
 column_config['active'] = st.column_config.CheckboxColumn(label='Active')
 
+df = df.sort_values(['active','name'], ascending=[False, True])
 #print(column_config)
 event = st.dataframe(
     df,
     on_select='rerun',
     selection_mode='multi-row',
     column_config = column_config,
+    hide_index=True,
 )
 
 if len(event.selection['rows']):
