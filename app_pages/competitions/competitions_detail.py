@@ -512,10 +512,10 @@ class CompetitionGroupParticipants():
         pos_all_groups_sql = sql.campaign_groups()
         if not pos_assigned_groups_df.empty:
             pos_all_groups_df = pd.DataFrame(pos_all_groups_sql.read(filter=f"WHERE table.campaign_id={self.competition_df['campaign_id'].tolist()[0]}"))
-            if not pos_all_groups_df.empty: pos_all_groups_df = pos_all_groups_df.sort_values(by='name')
+            if not pos_all_groups_df.empty: pos_all_groups_df = pos_all_groups_df.sort_values(by=['active', 'name'], ascending=[False, True])
         else:
             pos_all_groups_df = pd.DataFrame(pos_all_groups_sql.read(filter=f"WHERE table.campaign_id={self.competition_df['campaign_id'].tolist()[0]}"))
-            if not pos_all_groups_df.empty: pos_all_groups_df = pos_all_groups_df.sort_values(by='name')
+            if not pos_all_groups_df.empty: pos_all_groups_df = pos_all_groups_df.sort_values(by=['active', 'name'], ascending=[False, True])
             
         pos_assigned_participants_sql = sql.competition_participants()
         pos_assigned_participants_df = pd.DataFrame(pos_assigned_participants_sql.read(filter=f"WHERE table.competition_id={self.competition_df['id'].tolist()[0]}"))
@@ -524,10 +524,10 @@ class CompetitionGroupParticipants():
         pos_unassigned_participants_sql = sql.campaign_participants()
         if not pos_assigned_participants_df.empty:
             pos_unassigned_participants_df = pd.DataFrame(pos_unassigned_participants_sql.read(filter=f"WHERE table.campaign_id={self.competition_df['campaign_id'].tolist()[0]}")).query(f'id not in {pos_assigned_participants_df['campaign_participant_id'].tolist()}')
-            if not pos_unassigned_participants_df.empty: pos_unassigned_participants_df = pos_unassigned_participants_df.sort_values(by='name')
+            if not pos_unassigned_participants_df.empty: pos_unassigned_participants_df = pos_unassigned_participants_df.sort_values(by=['active', 'name'], ascending=[False, True])
         else:
             pos_unassigned_participants_df = pd.DataFrame(pos_unassigned_participants_sql.read(filter=f"WHERE table.campaign_id={self.competition_df['campaign_id'].tolist()[0]}"))
-            if not pos_unassigned_participants_df.empty: pos_unassigned_participants_df = pos_unassigned_participants_df.sort_values(by='name')
+            if not pos_unassigned_participants_df.empty: pos_unassigned_participants_df = pos_unassigned_participants_df.sort_values(by=['active', 'name'], ascending=[False, True])
                 
         exp_groups_participants = st.expander("Groups & Participants", expanded=False, width='stretch')
         #con_assigned = exp_groups_participants.container(horizontal=True, width='stretch')
@@ -596,6 +596,7 @@ class CompetitionGroupParticipants():
         with exp_unassigned:
             column_config = {key: None for key in pos_unassigned_participants_df.columns.to_list()}
             column_config['name'] = 'Participant'
+            column_config['active'] = st.column_config.CheckboxColumn(label='Active')
             if not pos_unassigned_participants_df.empty:
                 unassigned_participants = st.dataframe(
                     pos_unassigned_participants_df,
