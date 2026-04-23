@@ -61,6 +61,7 @@ class DBList():
         with con:
             if st.button(label='', icon=':material/add_2:', disabled=not is_superuser): self.add()
             if st.button(label='', icon=':material/settings_backup_restore:', disabled=not is_superuser or sel is None): self.restore(path=sel['path'].tolist()[0])
+            if st.button(label='', icon=':material/database_upload:', disabled=not is_superuser): self.upload()
             if st.button(label='', icon=':material/delete:', disabled=not is_superuser or sel is None): self.delete(path=sel['path'].tolist()[0])
 
     @st.dialog("Create backup")
@@ -96,6 +97,17 @@ class DBList():
                 st.rerun()
             if st.button(label='No'):
                 st.rerun()
+
+    @st.dialog("Upload backup")
+    def upload(self, path=None):
+        st_file = st.file_uploader(label='Choose file to upload', type='db')
+        if st_file is not None:
+            f_name = st_file.name.replace('db_backups_','')
+            print(f_name)
+            with open(f'./db_backups/{f_name}', "wb") as f:
+                f.write(st_file.getbuffer())
+                f.close
+            st.rerun()
 
     @st.dialog("Delete backup")
     def delete(self, path=None):
