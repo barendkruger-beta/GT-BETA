@@ -22,19 +22,20 @@ class ParticipantDetails():
         self.parent_page = "app_pages/participants/participants_overview.py"
         if self.df is not None:
             with self.obj:
-                st_name = st.text_input('Name', key=f'course_details_{df_id}_name', value=f'{self.df['name'].tolist()[0]}')
-                st_description = st.text_area('Description', key=f'course_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}')
+                st_name = st.text_input('Name', value=f'{self.df['name'].tolist()[0]}')
+                st_description = st.text_area('Description',value=f'{self.df['description'].tolist()[0]}')
+                st_email = st.text_input('Email address', value=f'{self.df['email'].tolist()[0]}')
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'course_details_{df_id}_active')
                 buttons_area = st.container(horizontal=True)
                 if st.user.email in st.secrets["superusers"]["emails"]:
                     with buttons_area:
                         if st.button(label='', icon=':material/check:', key='participant_details_update'):
-                            self.update(name=st_name, description=st_description, active=st_active)
+                            self.update(name=st_name, description=st_description, email=st_email, active=st_active)
                         if st.button(label='', icon=':material/delete:', key='participant_details_delete', disabled=True):
                             self.delete()                        
         
     @st.dialog(title='Update confirmation')
-    def update(self, name=None, description=None, active=None):
+    def update(self, name=None, description=None, email=None, active=None):
         if self.df is not None:
             st.write('Do you want to update all linked instances?')
             st_update_all = st.segmented_control(
@@ -44,8 +45,8 @@ class ParticipantDetails():
                 )
             
             if st.button(label='', icon=':material/check:'):
-                fields = ['name', 'description', 'active']
-                values = [name, description, active]
+                fields = ['name', 'description', 'email', 'active']
+                values = [name, description, email, active]
                 self.df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
                 st.session_state.participant = self.df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
                 
