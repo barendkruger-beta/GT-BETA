@@ -1257,6 +1257,17 @@ class EventWinnerNominations():
                                 pass
             
             nominations_df = nominations_df.sort_values(by=['points', 'name'], ascending=[False, True])
+            
+            # Hide other nominations if no scoring data exist
+            if points_card is None:
+                #nominations_df = nominations_df.query(f"name == ")
+                #print(st.user.email)
+                lu_participants_sql = sql.participants()
+                lu_participants_df = lu_participants_sql.read(f"WHERE table.email = '{st.user.email}'")
+                #print(lu_participants_df)
+                nominations_df = nominations_df.query(f"name == '{lu_participants_df['name'].tolist()[0]}'")
+                
+
             #print(nominations_df)
             exp = st.expander(label='Resies Rinkals')
             
@@ -1304,7 +1315,7 @@ class EventWinnerNominations():
                     hide_index=True,
                     )
                 
-                if st.form_submit_button(label='', icon=':material/check:', disabled=not st.session_state.global_admin or points_card is not None):
+                if st.form_submit_button(label='', icon=':material/check:', disabled=points_card is not None):
                     update_form()
             
 

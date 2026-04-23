@@ -235,35 +235,44 @@ def init():
         
     conn.commit()
     #print(f'Tables created\n{tables}')
-    
+
     # Check if FirstCreated and LastModified columns have been created, else create them
-    cursor.execute(f"SELECT * FROM {tables[0]} LIMIT 0") # Limit 0 to get structure without data
-    column_names = [description[0] for description in cursor.description]
-    if 'created' in column_names:
-        conn.close()
-        return None
-    
-    # Create FirstCreated and LastModified columns
-    print('Creating FirstCreated and LastModified columns')
+    update_tables = []
     for table in tables:
-        #print(f'\t{table}')
-        cursor.execute(f'''ALTER TABLE {table} ADD COLUMN created TEXT DEFAULT CURRENT_TIMESTAMP;''')
-        cursor.execute(f'''ALTER TABLE {table} ADD COLUMN last_modified TEXT DEFAULT CURRENT_TIMESTAMP;''')
-    conn.commit()
-    
-    # Create LastModified Triggers
-    print('Creating Trigger for LastModified columns')
-    for table in tables:
-        #print(f'\t{table}')
-        cursor.execute(f'''CREATE TRIGGER update_last_modified_{table}
-                       AFTER UPDATE ON {table}
-                       FOR EACH ROW
-                       BEGIN
-                       UPDATE {table}
-                       SET last_modified = CURRENT_TIMESTAMP
-                       WHERE rowid = NEW.rowid;
-                       END;''')
-    conn.commit()
+        cursor.execute(f"SELECT * FROM {table} LIMIT 0") # Limit 0 to get structure without data
+        column_names = [description[0] for description in cursor.description]
+        if not 'created' in column_names:
+            update_tables.append(table)
+            #conn.close()
+            #return None
+    #if len(update_tables) == 0: return None
+
+    #print(f'Table with missing Created and Last Modified columns: {update_tables}')
+    if False:    
+        if False:
+            # Create FirstCreated and LastModified columns
+            print('Creating FirstCreated and LastModified columns')
+            for table in update_tables:
+                #print(f'\t{table}')
+                cursor.execute(f'''ALTER TABLE {table} ADD COLUMN created TEXT DEFAULT CURRENT_TIMESTAMP;''')
+                cursor.execute(f'''ALTER TABLE {table} ADD COLUMN last_modified TEXT DEFAULT CURRENT_TIMESTAMP;''')
+            conn.commit()
+
+        if False:
+            update_tables = ['event_winner_nominations']    
+            for table in update_tables:
+                # Create LastModified Triggers
+                print('Creating Trigger for LastModified columns')
+                #print(f'\t{table}')
+                cursor.execute(f'''CREATE TRIGGER update_last_modified_{table}
+                            AFTER UPDATE ON {table}
+                            FOR EACH ROW
+                            BEGIN
+                            UPDATE {table}
+                            SET last_modified = CURRENT_TIMESTAMP
+                            WHERE rowid = NEW.rowid;
+                            END;''')
+        conn.commit()
     
     conn.close()
     return None
