@@ -1061,6 +1061,7 @@ class Individuals():
     course_tees_df = None
     scoring_holes_sql = None
     scoring_holes_df = None
+    points_card = None
     child_page = None
     
     def __init__(self, event_df=None):
@@ -1166,6 +1167,7 @@ class Individuals():
             #print(filter_str)
             points_card = points_card.sort_values(by=filter_str, ascending=False)                
             points_card['Rank'] = pd.Series(points_card['Points']).rank(method='min', ascending=False).astype(int).tolist()
+            self.points_card = points_card
             #print(points_card)
         
         exp = st.expander(label='Individual Leaderboard')
@@ -1202,7 +1204,110 @@ class Individuals():
                         column_config=column_config,
                         )
             
- 
+
+class EventWinnerNominations():
+    obj = None
+    event_winner_nominations_sql = None
+    event_winner_nominations_df = None
+    child_page = None
+
+    def __init__(self, event_df=None, points_card=None):
+        #print(points_card)
+        if event_df is not None:
+            event_id = event_df['id'].tolist()[0]
+            self.event_winner_nominations_sql = this_sql = sql.event_winner_nominations()
+            self.event_winner_nominations_df = this_sql.read(filter=f"WHERE table.event_id={event_id}")
+
+            event_participants_sql = sql.event_participants()
+            event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id={event_id}")
+            if event_participants_df is None: return
+            if event_participants_df.empty: return
+            event_participants_df = event_participants_df.sort_values(by='name')
+            
+            #print('Build nominations df')
+
+            nominations_df = pd.DataFrame()
+            nominations_df.index = event_participants_df['id'].tolist()
+            nominations_df['id'] = event_participants_df['id'].tolist()
+            nominations_df['name'] = event_participants_df['name'].tolist()
+            nominations_df['nomination_id'] = None
+            nominations_df['nomination_name'] = None
+            nominations_df['points'] = None
+
+            #print(f'Event ID = {event_id}')
+            if self.event_winner_nominations_df is not None:
+                for event_participant_id in event_participants_df['id'].tolist():
+                    # Read nominations
+                    nomination_df = self.event_winner_nominations_df.query(f"event_participant_id == {event_participants_df.at[event_participant_id, 'id']}")
+                    if nomination_df is not None:
+                        if not nomination_df.empty:
+                            nomination_name = nomination_df['name'].tolist()[0]
+                            #print(nomination_name)
+                            
+                            if nomination_name != "NULL": nomination_id = event_participants_df.query(f"name == '{nomination_name}'")['id'].tolist()[0]
+                            else: continue
+                            nominations_df.at[event_participant_id, 'nomination_id'] = nomination_id
+                            nominations_df.at[event_participant_id, 'nomination_name'] = nomination_name
+                            #print(nomination_df)
+
+                            # Update points
+                            if points_card is not None:
+                                if points_card.query(f"`Participant ID` == {nomination_id}") is not None:
+                                    nominations_df.at[event_participant_id, 'points'] = points_card.query(f"`Participant ID` == {nomination_id}")['Points'].tolist()[0]
+                                pass
+            
+            nominations_df = nominations_df.sort_values(by=['points', 'name'], ascending=[False, True])
+            #print(nominations_df)
+            exp = st.expander(label='Resies Rinkals')
+            
+            column_config = {key: None for key in nominations_df.columns.to_list()}
+            column_config['name'] = st.column_config.TextColumn(label='Name', disabled=True)
+            #column_config['nomination_id'] = st.column_config.NumberColumn(label='Rinkals ID', format='%d', disabled=True)
+            column_config['nomination_name'] = st.column_config.SelectboxColumn(label='Rinkals', options=event_participants_df['name'].tolist(), disabled=points_card is not None)
+            column_config['points'] = st.column_config.NumberColumn(label='Points', format='%d', disabled=True)
+
+            def update_form():
+                changes = st.session_state.event_winner_nominees_data
+                #print(changes)        
+                edited_rows = changes.get("edited_rows", {})        
+                for index, updates in edited_rows.items():
+                    for column, value in updates.items():
+                        event_participant_id = nominations_df.iloc[index]['id']
+                        #print(f'Participant with ID:{event_participant_id} changed')
+                        
+                        update_sql = self.event_winner_nominations_sql
+                        update_df = self.event_winner_nominations_df
+
+                        # Create entry if new
+                        fields = ['name', 'event_id', 'event_participant_id']
+                        values = [value, event_id, event_participant_id]
+                        #print(update_df)
+                        if update_df is None:
+                            #print('Create first')
+                            update_sql.add(fields=fields, values=values)
+                        elif update_df.query(f"event_participant_id == {event_participant_id}").empty:
+                            #print('Create entry')
+                            update_sql.add(fields=fields, values=values)
+                        else:
+                            #print('Update entry')
+                            update_id = update_df.query(f"event_participant_id == {event_participant_id}")['id'].tolist()[0]
+                            update_sql.update(id=update_id, fields=fields, values=values)
+
+                st.rerun()
+
+            st_form = exp.form(key='event_winner_nominees', border=False, enter_to_submit=False)
+            with st_form:
+                st.data_editor(
+                    key='event_winner_nominees_data',
+                    data=nominations_df,
+                    column_config=column_config,
+                    hide_index=True,
+                    )
+                
+                if st.form_submit_button(label='', icon=':material/check:', disabled=not st.session_state.global_admin or points_card is not None):
+                    update_form()
+            
+
 # Populate page 
 con = st.container(horizontal=True, vertical_alignment='center')
 
@@ -1213,6 +1318,8 @@ st_scoring_cards = EventScoringCards(event_df=st.session_state.event)
 st_individuals = Individuals(event_df=st.session_state.event)     
                              
 st_matches = EventMatches(event_df=st.session_state.event)
+
+st_event_winnner_nominations = EventWinnerNominations(event_df=st.session_state.event ,points_card=st_individuals.points_card)
 
 st_groups_participants = EventGroupParticipants(event_df=st.session_state.event)
 
