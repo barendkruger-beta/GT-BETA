@@ -70,30 +70,3 @@ if id is not None:
         navigate(sel, detail_page)
 else:
     col.button(label='', icon=':material/jump_to_element:', disabled=True)
-
-#if st.button('SQL Export'):
-#    export_sql()
-
-if st.user.email in st.secrets["superusers"]["emails"]:
-    if st.button(label='Download DB', key='sql_export'):
-            filename = sql.export_sql()
-            #print(filename)
-            with open(filename, "rb") as f:
-                file = f.read()
-                st.download_button(label='Download', data=f, file_name=filename, icon=':material/download:', on_click="ignore")
-                #    st.rerun()
-                pass
-
-if False:
-    if st.button("Reset DB"):
-        sql.testdata()
-        st.session_state.page = None
-        st.session_state.campaign = None
-        st.session_state.competition = None
-        st.session_state.event = None
-        st.session_state.scoring_card = None
-        st.session_state.hole_number = None
-        st.session_state.group = None
-        st.session_state.participant = None
-        
-        st.rerun()
