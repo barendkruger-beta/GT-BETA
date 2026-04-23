@@ -101,7 +101,6 @@ class DBList():
 
     @st.dialog("Download backup")
     def download(self, path=None):
-        #st.write(path[path.find('\\')+1:])
         f_name = path[path.find('\\')+1:]
         with open(path, "rb") as f:
             st.download_button(label='Download', data=f, file_name=f_name, icon=':material/download:')
@@ -111,7 +110,7 @@ class DBList():
         st_file = st.file_uploader(label='Choose file to upload', type='db')
         if st_file is not None:
             f_name = st_file.name.replace('db_backups_','')
-            print(f_name)
+            #print(f_name)
             with open(f'./db_backups/{f_name}', "wb") as f:
                 f.write(st_file.getbuffer())
                 f.close
