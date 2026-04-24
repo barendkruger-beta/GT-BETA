@@ -441,7 +441,8 @@ class ScoringCardScoring():
                             column_config=column_config,
                             #on_change=hole_data_update
                             )
-                if st.form_submit_button(label='', icon=':material/check:', disabled=not edit_permission):
+                df_active = df['active'].tolist()[0]
+                if st.form_submit_button(label='', icon=':material/check:', disabled=not edit_permission or not df_active):
                     hole_data_update()
             # Removed End
             
@@ -1080,7 +1081,8 @@ class ScoringCardGroupParticipants():
                             #on_change=hole_data_update
                             )
                 #print(pos_assigned_participants_df)
-                if st.form_submit_button(label='', icon=':material/check:', disabled=not st.session_state.global_admin):
+                df_active = df['active'].tolist()[0]
+                if st.form_submit_button(label='', icon=':material/check:', disabled=not st.session_state.global_admin or not df_active):
                     participants_form_update()
                 
                 #print(pos_assigned_participants_df['course_tee_id'])
@@ -1395,14 +1397,24 @@ class ScoringCardsDisplay():
             for index, participant in enumerate(self.participants):
                 column_config[f'S{index+1}'] = st.column_config.NumberColumn(label=participant.participant_df['name'].tolist()[0], format='%d', disabled=False)
                 column_config[f'P{index+1}'] = st.column_config.NumberColumn(label='Pts', format='%d', disabled=True)
-
+            
+            def color_disabled(val):
+                if val is None:
+                    return "background-color: transparent;"
+                else:
+                    return "background-color: dimgray;"
+            scorecard_df = scorecard_df.style.map(color_disabled, subset=['P1', 'P2', 'P3', 'P4'])
+            #scorecard_df = scorecard_df.style.set_properties(**{'background-color': 'darkslategray'}, subset=['P1', 'P2', 'P3', 'P4'])
+            
             st.data_editor(
                 key=f'scoring_card_bulk_update',
                 data=scorecard_df,
                 column_config=column_config,
-                hide_index=True,)
+                hide_index=True,
+                )
             
-            if st.form_submit_button(label='', icon=':material/check:', disabled=not st.session_state.global_admin):
+            df_active = df['active'].tolist()[0]
+            if st.form_submit_button(label='', icon=':material/check:', disabled=not st.session_state.global_admin or not df_active):
                 form_update()
 
     def match_scores(self, match_df=None, hole_number=None):
