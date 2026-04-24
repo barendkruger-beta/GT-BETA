@@ -39,7 +39,7 @@ class st_MatchInfo():
         #groups_df = groups_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by=['name'])
         self.groups_df = groups_df
         
-        self.title = f':primary[**{match_name}**: {format_name}] :gray[for] :primary[{value}] :gray[({tot_holes} holes from #{start_hole})]'
+        self.title = f'<span style="color:red;">{match_name}: {format_name}</span><span style="color:dodgerblue;"> {value} </span> <span style="font-size:10px;color:darkgray;">{tot_holes}h from #{start_hole}</span>'
         if groups_df is not None and participants_df is not None:
             participants_ids = participants_df['id'].tolist()
             groups_ids = groups_df['id'].tolist()
@@ -68,39 +68,39 @@ class st_MatchInfo():
                     holes = 0
 
             if len(group_points) == 2:        
-                self.teams = f':blue[{group_names[0]}] :gray[vs] :blue[{group_names[1]}]'
-                self.players = f'{' / '.join(group_participant_names[0])} :gray[vs] {' / '.join(group_participant_names[1])}'
+                self.teams = f'{group_names[0]} vs {group_names[1]}'
+                self.players = f'{' / '.join(group_participant_names[0])} ({group_points[0]}) <span style="color:darkgray;">vs</span> ({group_points[1]}) {' / '.join(group_participant_names[1])}'
                 if holes < tot_holes:
-                    hole_str = f'through {holes} of {tot_holes}'
-                else: hole_str = ' - match complete' 
+                    hole_str = f'<span style="color:darkgray;">through {holes} of {tot_holes}</span>'
+                else: hole_str = ' - match completed' 
                 if group_points[0] > group_points[1]:
-                    delta_value = f'**:green[{group_names[0]} up {group_points[0]-group_points[1]}]** :gray[{hole_str}]'
+                    delta_value = f'<span style="color:chartreuse;">{group_names[0]} up {group_points[0]-group_points[1]}</span><span style="color:darkgray;">{hole_str}</span>'
                 elif group_points[1] > group_points[0]:
-                    delta_value = f'**:green[{group_names[1]} up {group_points[1]-group_points[0]}]** :gray[{hole_str}]'
-                else: delta_value = f'**All Square** :gray[{hole_str}]'
+                    delta_value = f'<span style="color:chartreuse;">{group_names[1]} up {group_points[1]-group_points[0]}</span><span style="color:darkgray;">{hole_str}</span>'
+                else: delta_value = f'All Square {hole_str}'
                 self.status = delta_value
             else:
-                self.teams = ':gray[configure all participants]'
+                self.teams = '<span style="color:darkgray;">configure all participants</span>'
                 self.players = ''
                 self.status = ''
         else:
-            self.teams = ':gray[to be assigned]'
+            self.teams = '<span style="color:darkgray;">to be assigned</span>'
             self.players = ''
             self.status = ''
-        
+        print(delta_value)
         #self.st_obj(match_df=match_df, title=title, players=players, status=status)
         return         
-            
+                
     def st_obj(self):
         con = st.container(border=True, gap=None, horizontal=True)
         with con:
             txt_con = st.container(gap=None)
             with txt_con:
-                st.markdown(body=f'{self.title}')
-                st.markdown(body=f':small[{self.teams}]')
-                st.markdown(body=f':small[{self.players}]')
-                st.markdown(body=f'_:small[{self.status}]_')
-            btn_con = st.container(width='content')
+                st.markdown(body=f'<p style="font-size:12px;">{self.title}</p>', unsafe_allow_html=True)
+                st.markdown(body=f'<p style="font-size:10px;">{self.teams}</p>', unsafe_allow_html=True)
+                st.markdown(body=f'<p style="font-size:10px;">{self.players}</p>', unsafe_allow_html=True)
+                st.markdown(body=f'<p style="font-size:10px;">{self.status}</p>', unsafe_allow_html=True)
+            btn_con = st.container(width='content', horizontal=True)
             with btn_con:
                 if st.button(label='', icon=':material/edit:', key=f'match_edit_{self.match_df['id'].tolist()[0]}', disabled=not st.session_state.global_admin):
                     self.edit();
