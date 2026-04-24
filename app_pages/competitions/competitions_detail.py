@@ -88,7 +88,7 @@ class st_MatchInfo():
             self.teams = '<span style="color:darkgray;">to be assigned</span>'
             self.players = ''
             self.status = ''
-        print(delta_value)
+        #print(delta_value)
         #self.st_obj(match_df=match_df, title=title, players=players, status=status)
         return         
                 
