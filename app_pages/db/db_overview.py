@@ -135,6 +135,7 @@ class DBList():
                 st.rerun()
 
 # Populate page       
-st.subheader("Database - Backup and Recovery")
+with st.spinner('Loading data'):   
+    st.subheader("Database - Backup and Recovery")
 
-st_db_list = DBList()
+    st_db_list = DBList()

@@ -157,15 +157,16 @@ class CourseTeeHoles():
         
         
 # Populate page 
-con = st.container(horizontal=True, vertical_alignment='center')
+with st.spinner('Loading data'):
+    con = st.container(horizontal=True, vertical_alignment='center')
 
-st_details = CourseTeeDetails(df=st.session_state.course_tee)
+    st_details = CourseTeeDetails(df=st.session_state.course_tee)
 
-st_course_tee_holes = CourseTeeHoles(df=st.session_state.course_tee)
+    st_course_tee_holes = CourseTeeHoles(df=st.session_state.course_tee)
 
-with con:
-    if st.button(label='', icon=':material/arrow_back:'):
-        st.session_state.course_tee = None
-        st.session_state.page = st_details.parent_page
-        st.rerun()
-    st.subheader(f"Tee: {st.session_state.course_tee['name'].tolist()[0]}")
+    with con:
+        if st.button(label='', icon=':material/arrow_back:'):
+            st.session_state.course_tee = None
+            st.session_state.page = st_details.parent_page
+            st.rerun()
+        st.subheader(f"Tee: {st.session_state.course_tee['name'].tolist()[0]}")

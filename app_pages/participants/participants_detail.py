@@ -413,19 +413,21 @@ class EclecticStats():
 
 
 # Populate page 
-con = st.container(horizontal=True, vertical_alignment='center')
+with st.spinner('Loading data'):
+    con = st.container(horizontal=True, vertical_alignment='center')
 
-st_details = ParticipantDetails(df=st.session_state.participant)
+    st_details = ParticipantDetails(df=st.session_state.participant)
 
-st_individual_stats = IndividualStats(df=st.session_state.participant)
+    st_individual_stats = IndividualStats(df=st.session_state.participant)
 
-st_match_stats = MatchStats(df=st.session_state.participant)
+    st_match_stats = MatchStats(df=st.session_state.participant)
 
-st_eclectic_stats = EclecticStats(df=st.session_state.participant)
+    st_eclectic_stats = EclecticStats(df=st.session_state.participant)
 
-with con:
-    if st.button(label='', icon=':material/arrow_back:'):
-        st.session_state.participant = None
-        st.session_state.page = st_details.parent_page
-        st.rerun()
-    st.subheader(f"Participant: {st.session_state.participant['name'].tolist()[0]}")
+    with con:
+        if st.button(label='', icon=':material/arrow_back:'):
+            st.session_state.participant = None
+            st.session_state.page = st_details.parent_page
+            st.rerun()
+        st.subheader(f"Participant: {st.session_state.participant['name'].tolist()[0]}")
+        

@@ -78,6 +78,14 @@ def init():
         );''')
     tables.append('competitions')
     
+    cursor.execute('''CREATE TABLE IF NOT EXISTS competition_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, active BOOLEAN DEFAULT TRUE, sequence INTEGER DEFAULT 0,
+        shots_tot_min INTEGER, points_tot_max INTEGER, points_ave_max REAL, eclectic_tot_max INTEGER, par3_ave_max REAL, par4_ave_max REAL, par5_ave_max REAL, out_ave_max REAL, in_ave_max REAL, rings_tot_max INTEGER,
+        competition_id,
+        FOREIGN KEY (competition_id) REFERENCES competitions(id) ON UPDATE CASCADE ON DELETE CASCADE
+        );''')
+    tables.append('competition_stats')
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS competition_groups (
         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, active BOOLEAN DEFAULT TRUE, sequence INTEGER DEFAULT 0,
         competition_id INTEGER, campaign_group_id INTEGER,
@@ -95,6 +103,17 @@ def init():
         );''')
     tables.append('competition_participants')
     
+    cursor.execute('''CREATE TABLE IF NOT EXISTS competition_participant_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, active BOOLEAN DEFAULT TRUE, sequence INTEGER DEFAULT 0, hc_index REAL,
+        shots_tot INTEGER, points_tot INTEGER, points_ave REAL, eclectic_tot INTEGER, par3_ave REAL, par4_ave REAL, par5_ave REAL, out_ave REAL, in_ave REAL, rings_tot INTEGER,
+        competition_id INTEGER, competition_group_id INTEGER, campaign_participant_id INTEGER, competition_participant_id INTEGER,
+        FOREIGN KEY (competition_id) REFERENCES competitions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY (competition_group_id) REFERENCES competition_groups(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY (campaign_participant_id) REFERENCES campaign_participants(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY (competition_participant_id) REFERENCES competition_participants(id) ON UPDATE CASCADE ON DELETE CASCADE
+        );''')
+    tables.append('competition_participant_stats')
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS eclectics (
         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, active BOOLEAN DEFAULT TRUE, sequence INTEGER DEFAULT 0, total INTEGER,
         hole1 INTEGER, hole2 INTEGER, hole3 INTEGER, hole4 INTEGER, hole5 INTEGER, hole6 INTEGER,
@@ -210,6 +229,17 @@ def init():
         );''')    
     tables.append('scoring_rounds')
     
+    cursor.execute('''CREATE TABLE IF NOT EXISTS scoring_round_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, active BOOLEAN DEFAULT TRUE, sequence INTEGER DEFAULT 0, rating INTEGER, validated BOOLEAN,
+        shots_tot INTEGER, points_tot INTEGER, out_tot INTEGER, in_tot INTEGER, par3_ave REAL, par4_ave REAL, par5_ave REAL, rings_tot INTEGER,
+        course_tee_id INTEGER, scoring_card_id INTEGER, scoring_card_participant_id INTEGER, scoring_round_id INTEGER,
+        FOREIGN KEY (course_tee_id) REFERENCES course_tees(id) ON UPDATE CASCADE ON DELETE SET NULL,
+        FOREIGN KEY (scoring_card_id) REFERENCES scoring_cards(id) ON UPDATE CASCADE ON DELETE CASCADE, 
+        FOREIGN KEY (scoring_card_participant_id) REFERENCES scoring_card_participants(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY (scoring_round_id) REFERENCES scoring_rounds(id) ON UPDATE CASCADE ON DELETE CASCADE
+        );''')    
+    tables.append('scoring_round_stats')
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS scoring_holes (
         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT, sequence INTEGER DEFAULT 0, number INTEGER, shots INTEGER, points INTEGER,
         scoring_round_id INTEGER,
@@ -232,7 +262,8 @@ def init():
         FOREIGN KEY(event_validated_round_id) REFERENCES event_validated_rounds(id) ON UPDATE CASCADE ON DELETE CASCADE
         );''')
     tables.append('event_validated_holes')
-        
+
+
     conn.commit()
     #print(f'Tables created\n{tables}')
 
@@ -248,21 +279,21 @@ def init():
     #if len(update_tables) == 0: return None
 
     #print(f'Table with missing Created and Last Modified columns: {update_tables}')
-    if False:    
-        if False:
+    if len(update_tables) != 0:    
+        if False or True:
             # Create FirstCreated and LastModified columns
-            print('Creating FirstCreated and LastModified columns')
+            print(f'Creating FirstCreated and LastModified columns for tables: {update_tables}')
             for table in update_tables:
                 #print(f'\t{table}')
                 cursor.execute(f'''ALTER TABLE {table} ADD COLUMN created TEXT DEFAULT CURRENT_TIMESTAMP;''')
                 cursor.execute(f'''ALTER TABLE {table} ADD COLUMN last_modified TEXT DEFAULT CURRENT_TIMESTAMP;''')
             conn.commit()
 
-        if False:
-            update_tables = ['event_winner_nominations']    
+        if False or True:
+            #update_tables = ['event_winner_nominations']
+            print(f'Creating Trigger for LastModified columns for tables: {update_tables}')
             for table in update_tables:
                 # Create LastModified Triggers
-                print('Creating Trigger for LastModified columns')
                 #print(f'\t{table}')
                 cursor.execute(f'''CREATE TRIGGER update_last_modified_{table}
                             AFTER UPDATE ON {table}

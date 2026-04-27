@@ -1320,25 +1320,27 @@ class EventWinnerNominations():
             
 
 # Populate page 
-con = st.container(horizontal=True, vertical_alignment='center')
+with st.spinner('Loading data'):
+    con = st.container(horizontal=True, vertical_alignment='center')
 
-st_details = EventDetails(df=st.session_state.event)
-                      
-st_scoring_cards = EventScoringCards(event_df=st.session_state.event)
+    st_details = EventDetails(df=st.session_state.event)
+                        
+    st_scoring_cards = EventScoringCards(event_df=st.session_state.event)
 
-st_individuals = Individuals(event_df=st.session_state.event)     
-                             
-st_matches = EventMatches(event_df=st.session_state.event)
+    st_individuals = Individuals(event_df=st.session_state.event)     
+                                
+    st_matches = EventMatches(event_df=st.session_state.event)
 
-st_event_winnner_nominations = EventWinnerNominations(event_df=st.session_state.event ,points_card=st_individuals.points_card)
+    st_event_winnner_nominations = EventWinnerNominations(event_df=st.session_state.event ,points_card=st_individuals.points_card)
 
-st_groups_participants = EventGroupParticipants(event_df=st.session_state.event)
+    st_groups_participants = EventGroupParticipants(event_df=st.session_state.event)
 
-with con:
-    if st.button(label='', icon=':material/arrow_back:'):
-        st.session_state.event = None
-        st.session_state.page = st_details.parent_page
-        st.rerun()
-    if st.button(label='', icon=':material/refresh:'):
-        st.rerun()
-    st.subheader(f"Event: {st.session_state.event['name'].tolist()[0]}")
+    with con:
+        if st.button(label='', icon=':material/arrow_back:'):
+            st.session_state.event = None
+            st.session_state.page = st_details.parent_page
+            st.rerun()
+        if st.button(label='', icon=':material/refresh:'):
+            st.rerun()
+        st.subheader(f"Event: {st.session_state.event['name'].tolist()[0]}")
+        

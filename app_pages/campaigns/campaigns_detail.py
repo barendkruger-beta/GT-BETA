@@ -395,20 +395,22 @@ class CampaignGroupParticipants():
             #print(f'ID to update: {participant_id}\nValues:{values}')
             st.rerun()
 
-# Populate page 
-con = st.container(horizontal=True, vertical_alignment='center')
+# Populate page
+with st.spinner('Loading data'):
+    con = st.container(horizontal=True, vertical_alignment='center')
 
-st_details = CampaignDetails(df=st.session_state.campaign)
+    st_details = CampaignDetails(df=st.session_state.campaign)
 
-st_competitions = CampaignCompetitions(campaign_df=st.session_state.campaign)
+    st_competitions = CampaignCompetitions(campaign_df=st.session_state.campaign)
 
-st_groups_participants = CampaignGroupParticipants(campaign_df=st.session_state.campaign)
+    st_groups_participants = CampaignGroupParticipants(campaign_df=st.session_state.campaign)
 
-with con:
-    if st.button(label='', icon=':material/arrow_back:'):
-        st.session_state.campaign = None
-        st.session_state.page = st_details.parent_page
-        st.rerun()
-    if st.button(label='', icon=':material/refresh:'):
-        st.rerun()
-    st.subheader(f"Campaign: {st.session_state.campaign['name'].tolist()[0]}")
+    with con:
+        if st.button(label='', icon=':material/arrow_back:'):
+            st.session_state.campaign = None
+            st.session_state.page = st_details.parent_page
+            st.rerun()
+        if st.button(label='', icon=':material/refresh:'):
+            st.rerun()
+        st.subheader(f"Campaign: {st.session_state.campaign['name'].tolist()[0]}")
+        

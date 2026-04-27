@@ -112,13 +112,15 @@ class GroupDetails():
                 st.rerun()
 
 # Populate page
-con = st.container(horizontal=True, vertical_alignment='center')
+with st.spinner('Loading data'):
+    con = st.container(horizontal=True, vertical_alignment='center')
 
-st_details = GroupDetails(df=st.session_state.group)
+    st_details = GroupDetails(df=st.session_state.group)
 
-with con:
-    if st.button(label='', icon=':material/arrow_back:'):
-        st.session_state.group = None
-        st.session_state.page = st_details.parent_page
-        st.rerun()
-    st.subheader(f"Group: {st.session_state.group['name'].tolist()[0]}")
+    with con:
+        if st.button(label='', icon=':material/arrow_back:'):
+            st.session_state.group = None
+            st.session_state.page = st_details.parent_page
+            st.rerun()
+        st.subheader(f"Group: {st.session_state.group['name'].tolist()[0]}")
+        
