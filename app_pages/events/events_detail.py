@@ -1261,10 +1261,10 @@ class EventWinnerNominations():
             # Hide other nominations if no scoring data exist
             if points_card is None:
                 #nominations_df = nominations_df.query(f"name == ")
-                #print(st.user.email)
+                print(st.user.to_dict())
                 lu_participants_sql = sql.participants()
-                lu_participants_df = lu_participants_sql.read(f"WHERE table.email = '{st.user.email}'")
-                #print(lu_participants_df)
+                lu_participants_df = lu_participants_sql.read(f"WHERE table.email = '{st.user.email.lower()}'")
+                print(lu_participants_df)
                 nominations_df = nominations_df.query(f"name == '{lu_participants_df['name'].tolist()[0]}'")
                 
 

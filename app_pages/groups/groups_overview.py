@@ -18,7 +18,7 @@ class GroupsOverview():
         st_con = st.container(border=False)
         with st_con:
             st_con_buttons = st.container(border=False, horizontal=True)
-            if st_con_buttons.button(label='', icon=':material/add_2:', key='groups_overview_add', disabled=not st.user.email in st.secrets["superusers"]["emails"]): self.add()
+            if st_con_buttons.button(label='', icon=':material/add_2:', key='groups_overview_add', disabled=not st.user.email.lower() in st.secrets["superusers"]["emails"]): self.add()
             
             column_config = {key: None for key in df.columns.to_list()}
             column_config['name'] = st.column_config.TextColumn(label='Name')
@@ -39,7 +39,7 @@ class GroupsOverview():
             elif len(st_df.selection['cells']):
                 index = st_df.selection['cells'][0][0]
             if index is not None:
-                if st_con_buttons.button(label='', icon=':material/jump_to_element:', key='groups_overview_open', disabled=not st.user.email in st.secrets["superusers"]["emails"]):
+                if st_con_buttons.button(label='', icon=':material/jump_to_element:', key='groups_overview_open', disabled=not st.user.email.lower() in st.secrets["superusers"]["emails"]):
                     self.open(index=index, df=df)
             else:
                 st_con_buttons.button(label='', icon=':material/jump_to_element:', key='groups_overview_open', disabled=True)

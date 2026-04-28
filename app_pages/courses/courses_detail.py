@@ -22,7 +22,7 @@ class CourseDetails():
                 st_description = st.text_area('Description', key=f'course_details_{df_id}_description', value=f'{self.df['description'].tolist()[0]}')
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'course_details_{df_id}_active')
                 buttons_area = st.container(horizontal=True)
-                if st.user.email in st.secrets["superusers"]["emails"]:
+                if st.user.email.lower() in st.secrets["superusers"]["emails"]:
                     with buttons_area:
                         if st.button(label='', icon=':material/check:', key='course_details_update'):
                             self.update(name=st_name, description=st_description, active=st_active)
@@ -73,7 +73,7 @@ class CourseCourseTees():
             col = st.container(horizontal=True, width='stretch')
 
             with col:
-                if st.button(label='', icon=':material/add_2:', disabled=not st.user.email in st.secrets["superusers"]["emails"]): self.add(course_df['id'].tolist()[0])
+                if st.button(label='', icon=':material/add_2:', disabled=not st.user.email.lower() in st.secrets["superusers"]["emails"]): self.add(course_df['id'].tolist()[0])
 
             column_config = {key: None for key in self.course_tees_df.columns.to_list()}
             column_config['name'] = 'Name'

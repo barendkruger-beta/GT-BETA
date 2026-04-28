@@ -40,7 +40,7 @@ st.subheader("Courses")
 
 col = st.container(horizontal=True, width='stretch')
 with col:
-    if st.button(label='', icon=':material/add_2:', disabled=not st.user.email in st.secrets["superusers"]["emails"]): add()
+    if st.button(label='', icon=':material/add_2:', disabled=not st.user.email.lower() in st.secrets["superusers"]["emails"]): add()
 
 column_config = {key: None for key in df.columns.to_list()}
 column_config['name'] = st.column_config.TextColumn(label='Name')

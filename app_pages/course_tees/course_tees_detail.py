@@ -25,7 +25,7 @@ class CourseTeeDetails():
                 st_active = st.toggle(label='Active', value=df['active'].tolist()[0], key=f'course_tee_details_{df_id}_active')
                 
                 buttons_area = st.container(horizontal=True)
-                is_superuser = st.user.email in st.secrets["superusers"]["emails"]
+                is_superuser = st.user.email.lower() in st.secrets["superusers"]["emails"]
                 if is_superuser:
                     with buttons_area:
                         if st.button(label='', icon=':material/check:', key='course_tee_details_update'):
@@ -86,7 +86,7 @@ class CourseTeeHoles():
                                            #"Active":st.column_config.CheckboxColumn(),
                                            }
                             )
-                if st.form_submit_button(label='', icon=':material/check:', disabled=not st.user.email in st.secrets["superusers"]["emails"]):
+                if st.form_submit_button(label='', icon=':material/check:', disabled=not st.user.email.lower() in st.secrets["superusers"]["emails"]):
                     self.update()
                     st.rerun()
       

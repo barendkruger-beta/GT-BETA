@@ -19,7 +19,7 @@ class CampaignDetails():
         self.obj = st.expander(label='Details')
         
         # Get user role
-        user_email = st.user.email
+        user_email = st.user.email.lower()
         participants_sql = sql.participants()
         participants_df = pd.DataFrame(participants_sql.read(f"WHERE table.email = '{user_email}'"))
         if not participants_df.empty:

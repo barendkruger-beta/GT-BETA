@@ -263,7 +263,7 @@ class ScoringCardDetails():
             participants_sql = sql.participants()
             participant_email = pd.DataFrame(participants_sql.read(f"WHERE table.id == {participant_id}"))['email'].tolist()[0]
             global edit_permission
-            edit_permission = st.session_state.global_admin or st.user.email == participant_email
+            edit_permission = st.session_state.global_admin or st.user.email.lower() == participant_email
             
             with self.obj:
                 st_name = st.text_input('Name', key=f'scoring_card_details_{df_id}_name', value=f'{self.df['name'].tolist()[0]}', disabled=not st.session_state.global_admin)

@@ -7,7 +7,7 @@ from datetime import datetime
 class DBList():
     
     def __init__(self):
-        is_superuser = st.user.email in st.secrets["superusers"]["emails"]
+        is_superuser = st.user.email.lower() in st.secrets["superusers"]["emails"]
         if not is_superuser:
             st.write('Access restricted, contact your administrator.')
             return
