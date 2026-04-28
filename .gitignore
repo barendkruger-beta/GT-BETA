@@ -1,5 +1,5 @@
 .streamlit/secrets.toml
-GT.db
+#GT.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

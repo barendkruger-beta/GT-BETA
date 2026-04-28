@@ -70,3 +70,5 @@ if id is not None:
         navigate(sel, detail_page)
 else:
     col.button(label='', icon=':material/jump_to_element:', disabled=True)
+
+st.markdown(body=f'<p style="font-size:10px;">{st.user.email.lower()}</p>', unsafe_allow_html=True)
