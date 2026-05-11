@@ -3,16 +3,15 @@ import sql
 import session_states
 import pages
 from datetime import datetime
+#from st_supabase_connection import SupabaseConnection
+#from supabase import create_client, Client
 
 def login_screen():
     st.header("Please log in")
     if st.button("Log in with Google"):
         st.login()
 
-if not st.user.is_logged_in:
-    # Show login screen
-    login_screen()
-else:
+def load_app():
     # Initialize session states
     session_states.init()
     
@@ -40,3 +39,39 @@ else:
             st.session_state.page = None
             st.switch_page(page)                
     pg.run()
+
+if False:
+    def init_connection():
+        url = st.secrets["supabase"]["SUPABASE_URL"]
+        key = st.secrets["supabase"]["SUPABASE_KEY"]
+        return create_client(url, key)
+
+    def run_query():
+        return supabase.table("campaign_participants").select("*").execute()
+
+    def read_table_foreign_keys(table):
+        data = supabase.rpc("read_table_foreign_keys", {"target_table_name": f"'{table}'"}).execute()
+        return data
+
+    if not st.user.is_logged_in:
+        # Show login screen
+        login_screen()
+    else:
+
+        supabase = init_connection()
+
+        #rows = run_query()
+        rows = read_table_foreign_keys('campaign_participants')
+
+        #resp = supabase.rpc(
+        #"read_table_foreign_keys",
+        #{"target_table_name": "campaign_participants"}
+        #).execute()
+
+        #print(resp)
+        #print(resp.data)
+
+        print(rows)
+        #for row in rows.data:
+        #    st.write(f"{row['name']}")
+        ##load_app()
