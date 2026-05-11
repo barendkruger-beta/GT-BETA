@@ -40,12 +40,14 @@ def load_app():
             st.switch_page(page)                
     pg.run()
 
-    if not st.user.is_logged_in:
-        # Show login screen
-        login_screen()
-    else:
-        load_app()
-        
+if not st.user.is_logged_in:
+    # Show login screen
+    login_screen()
+else:
+    load_app()
+
+    
+
 if False:
     def init_connection():
         url = st.secrets["supabase"]["SUPABASE_URL"]
