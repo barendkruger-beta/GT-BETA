@@ -1,6 +1,6 @@
-streamlit
+streamlit==1.57.0
 Authlib==1.6.9
-pandas
+pandas==3.0.2
 sqlalchemy
-matplotlib
+matplotlib==3.10.8
 st-supabase-connection==2.1.3

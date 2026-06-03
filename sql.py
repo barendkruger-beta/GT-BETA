@@ -3,6 +3,110 @@ import sqlite3
 #from sqlalchemy import text, types
 import pandas as pd
 from datetime import datetime
+from supabase import create_client, Client
+
+@st.cache_resource
+def get_supabase_admin():
+    return create_client(
+            st.secrets["supabase"]["SUPABASE_URL"], 
+            st.secrets["supabase"]["SUPABASE_SERVICE_KEY"]
+        )
+
+def read_db(conn=None, table=None, filter=None, legacy=True):
+    # LEGACY SQLite DB
+    if legacy:
+        conn = connect()
+        try:
+            # Step 1: Base query formation
+            query = f"SELECT * FROM {table}"
+            params = []
+            
+            # Step 2: Dynamic WHERE clause construction
+            if filter is not None and len(filter) > 0:
+                where_clauses = []
+                for column, value in filter:
+                    if isinstance(value, list):
+                        # Creates 'column IN (?, ?, ?)' placeholders
+                        placeholders = ", ".join(["?"] * len(value))
+                        where_clauses.append(f"{column} IN ({placeholders})")
+                        params.extend(value)
+                    else:
+                        # Creates 'column = ?' placeholder
+                        where_clauses.append(f"{column} = ?")
+                        params.append(value)
+                
+                query += " WHERE " + " AND ".join(where_clauses)
+            
+            # Step 3: Execute query and format output
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            columns = [column[0] for column in cursor.description]
+            
+            # Convert row tuples to list of dictionaries to match Supabase structure
+            all_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return all_data
+
+        except Exception as e:
+            st.error(f"Database error (SQLite): {e}")
+            return None
+
+    # NEW" Supabase DB
+    try:
+        query = conn.table(table).select("*")
+        if filter is not None:
+            for column, value in filter:
+                #print(f'Filter: Column={column} Value={value}')
+                if isinstance(value, list):
+                    query.in_(column, value)
+                else:
+                    query.eq(column, value)
+        response = query.execute()
+        
+        all_data = []
+        start = 0
+        end = 999
+        while len(response.data) == 1000:
+            all_data.extend(response.data)
+            start += 1000
+            end += 1000
+            query = conn.table(table).select("*").range(start, end)
+            if filter is not None:
+                for column, value in filter:
+                    if isinstance(value, list):
+                        query.in_(column, value)
+                    else:
+                        query.eq(column, value)
+            response = query.execute()
+        all_data.extend(response.data) 
+
+    except Exception as e:
+        st.error(f"Database error: {e}")
+        all_data = None
+    return all_data
+
+def write_db(conn=None, table=None, entry_id=None, fields=None, values=None):
+    entry = None
+    print('Start Write DB')
+    try:
+        fields_values = dict(zip(fields, values))
+        print(f'Field and Values to write\n{fields_values}')
+        if entry_id is not None:
+            # Update table entry
+            print('Updating entry')
+            query = conn.table(table).update(fields_values).eq('id', entry_id)#.select('id')
+        else:
+            # Insert table entry
+            print('Inserting entry')
+            query = conn.table(table).insert(fields_values)#.select('id')
+        print(query)
+        response = query.execute()
+        print(response)
+        #entry = response.data['id']
+
+    except Exception as e:
+        st.error(f"Database error: {e}")
+        all_data = None
+    return entry
 
 tables = []
 

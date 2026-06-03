@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 import sql
 
-# Load page dataframe
+# Classic Load page dataframe
 df_sql = sql.campaigns()
 df = pd.DataFrame(df_sql.read())
+
+# New Load page dataframe
+#supabase_db = sql.get_supabase_admin()
+#df = pd.DataFrame(sql.read_db(conn=supabase_db, table='campaigns'))
 
 # Set next detail page
 detail_page = "app_pages/campaigns/campaigns_detail.py"
@@ -19,6 +23,7 @@ def add():
         fields = ["name", "description", "active"]
         values = [name, description, active]
         df_sql.add(fields=fields, values=values)
+        #entry_id = sql.write_db(conn=supabase_db, table='campaigns', fields=fields, values=values)
         st.rerun()
 
 # Open detail page                        
@@ -42,7 +47,7 @@ st.subheader("Campaigns")
 
 col = st.container(horizontal=True, width='stretch')
 with col:
-    if st.button(label='', icon=':material/add_2:', disabled=True): add()
+    if st.button(label='', icon=':material/add_2:', disabled=False): add()
 
 column_config = {key: None for key in df.columns.to_list()}
 column_config['name'] = st.column_config.TextColumn(label='Name')
