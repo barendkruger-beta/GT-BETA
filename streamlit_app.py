@@ -6,8 +6,8 @@ from datetime import datetime
 #from st_supabase_connection import SupabaseConnection
 #from supabase import create_client, Client
 
-if st.button(label='Log Out'):
-    st.logout()
+#if st.button(label='Log Out'):
+#    st.logout()
 
 def login_screen():
     st.header("Please log in")
