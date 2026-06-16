@@ -1,8 +1,10 @@
 import streamlit as st
+import session_states
 import pandas as pd
 import sql
 
 global_admin = False
+
 
 class CampaignDetails():
     obj = None
@@ -154,7 +156,8 @@ class CampaignCompetitions():
         st.session_state.group = None
         st.session_state.participant = None
         st.session_state.event = None 
-        
+
+        session_states.save_states()
         st.session_state.page = page    
         st.rerun()
 
@@ -408,6 +411,8 @@ with st.spinner('Loading data'):
     with con:
         if st.button(label='', icon=':material/arrow_back:'):
             st.session_state.campaign = None
+            session_states.save_states()
+            
             st.session_state.page = st_details.parent_page
             st.rerun()
         if st.button(label='', icon=':material/refresh:'):

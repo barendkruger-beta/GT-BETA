@@ -1,4 +1,5 @@
 import streamlit as st
+import session_states
 import pandas as pd
 import sql
 
@@ -23,14 +24,7 @@ def add():
 # Open detail page                        
 def open(sel, page):
     st.session_state.course = sel
-    #st.session_state.campaign = sel
-    #st.session_state.series = None
-    #st.session_state.event = None
-    #st.session_state.groups = None
-    #st.session_state.participants = None
-    #st.session_state.event = None 
-    #st.session_state.scoring_card = None 
-    #st.session_state.scoring_hole = None
+    session_states.save_states()
     
     st.session_state.page = page    
     st.rerun()

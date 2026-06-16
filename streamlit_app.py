@@ -6,6 +6,9 @@ from datetime import datetime
 #from st_supabase_connection import SupabaseConnection
 #from supabase import create_client, Client
 
+if st.button(label='Log Out'):
+    st.logout()
+
 def login_screen():
     st.header("Please log in")
     if st.button("Log in with Google"):
@@ -44,10 +47,19 @@ if not st.user.is_logged_in:
     # Show login screen
     login_screen()
 else:
+    if 'user_participant_id' not in st.session_state:
+        participants_sql = sql.participants()
+        participants_df = participants_sql.read()
+
+        user_email = st.user.email.lower()
+        participant_df = participants_df.query(f"email == '{user_email}'")
+        
+        if not participant_df.empty:
+            #print(participant_df)
+            st.session_state.user_participant_id = participant_df['id'].tolist()[0]
+            session_states.load_states()
     load_app()
-
     
-
 if False:
     def init_connection():
         url = st.secrets["supabase"]["SUPABASE_URL"]

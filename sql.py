@@ -629,7 +629,142 @@ def write_table(qry):
     conn.close()
     return data
 
-     
+
+class participant_states():
+    table = 'participant_states'   
+    columns = None
+    foreign_columns = None
+    
+    def __init__(self):
+        self.columns = read_table_columns_full(self.table)
+        self.foreign_columns = read_table_foreign_keys(self.table)
+
+    def read(self, filter=None):
+        qry = f"SELECT {self.table}.* "
+        if len(self.foreign_columns):            
+            for column in self.foreign_columns:
+                qry += f", {column.replace(".id", ".name")} {column.replace(".id", "_name")} "
+        qry += f"FROM {self.table} "
+        if len(self.foreign_columns):
+            for column in self.foreign_columns:
+                qry += f"LEFT JOIN {column[:column.find(".")-1]}s ON {self.table}.{column.replace("s.", "_")} = {column} "
+        if filter is not None: qry+=' '+filter.replace("table.", f"{self.table}.")
+        qry += ";"
+        
+        data = read_table(qry)
+        df = None
+        column_names = [list(row) for row in zip(*self.columns)][0]
+        if len(self.foreign_columns):            
+            for column in self.foreign_columns:
+                column_names.append(f"{column.replace(".id", "_name")}")
+                
+        if data:
+            indexes = [list(i) for i in zip(*data)][0]
+            df = pd.DataFrame(data=data, columns=column_names, index=indexes)
+        return df 
+    
+    def add(self, fields, values):
+        f = []
+        for field in fields: f.append(field)
+        v = []
+        for value in values: v.append(value)
+        
+        columns = list(map(list, zip(*self.columns)))[0]
+        for field, value in zip(fields, values):
+            if field not in columns:
+                v.pop(f.index(field))
+                f.pop(f.index(field))
+            else:
+                pass
+                #print(f'field in columns = {field}')
+                               
+        formatted_values = convert_sqlite_python(columns=self.columns, fields=f, values=v)
+        #print(f'formatted values = {formatted_values}')
+        qry = f"INSERT INTO {self.table} ({','.join(f)}) VALUES ({','.join(formatted_values)});"
+        return write_table(qry)  
+
+    def update(self, id, fields, values):
+        formatted_values = convert_sqlite_python(columns=self.columns, fields=fields, values=values)
+        cols = []
+        for field, value in zip(fields, formatted_values):
+            cols.append(f"{field}={value}")
+
+        qry = f"UPDATE {self.table} SET {','.join(cols)} WHERE id={id};"
+        return write_table(qry)
+    
+    def delete(self, id):
+        qry = f'DELETE FROM {self.table} WHERE id={id}'
+        return write_table(qry) 
+
+
+class SQLiteTable():
+    table = None   
+    columns = None
+    foreign_columns = None
+    
+    def __init__(self, table_name):
+        self.table = table_name
+        self.columns = read_table_columns_full(self.table)
+        self.foreign_columns = read_table_foreign_keys(self.table)
+
+    def read(self, filter=None):
+        qry = f"SELECT {self.table}.* "
+        if len(self.foreign_columns):            
+            for column in self.foreign_columns:
+                qry += f", {column.replace(".id", ".name")} {column.replace(".id", "_name")} "
+        qry += f"FROM {self.table} "
+        if len(self.foreign_columns):
+            for column in self.foreign_columns:
+                qry += f"LEFT JOIN {column[:column.find(".")-1]}s ON {self.table}.{column.replace("s.", "_")} = {column} "
+        if filter is not None: qry+=' '+filter.replace("table.", f"{self.table}.")
+        qry += ";"
+        
+        data = read_table(qry)
+        df = None
+        column_names = [list(row) for row in zip(*self.columns)][0]
+        if len(self.foreign_columns):            
+            for column in self.foreign_columns:
+                column_names.append(f"{column.replace(".id", "_name")}")
+                
+        if data:
+            indexes = [list(i) for i in zip(*data)][0]
+            df = pd.DataFrame(data=data, columns=column_names, index=indexes)
+        return df 
+    
+    def add(self, fields, values):
+        f = []
+        for field in fields: f.append(field)
+        v = []
+        for value in values: v.append(value)
+        
+        columns = list(map(list, zip(*self.columns)))[0]
+        for field, value in zip(fields, values):
+            if field not in columns:
+                v.pop(f.index(field))
+                f.pop(f.index(field))
+            else:
+                pass
+                #print(f'field in columns = {field}')
+                               
+        formatted_values = convert_sqlite_python(columns=self.columns, fields=f, values=v)
+        #print(f'formatted values = {formatted_values}')
+        qry = f"INSERT INTO {self.table} ({','.join(f)}) VALUES ({','.join(formatted_values)});"
+        return write_table(qry)  
+
+    def update(self, id, fields, values):
+        formatted_values = convert_sqlite_python(columns=self.columns, fields=fields, values=values)
+        cols = []
+        for field, value in zip(fields, formatted_values):
+            cols.append(f"{field}={value}")
+
+        qry = f"UPDATE {self.table} SET {','.join(cols)} WHERE id={id};"
+        return write_table(qry)
+    
+    def delete(self, id):
+        qry = f'DELETE FROM {self.table} WHERE id={id}'
+        return write_table(qry) 
+
+
 class campaigns():
     table = 'campaigns'   
     columns = None

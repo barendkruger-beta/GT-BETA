@@ -1,4 +1,5 @@
 import streamlit as st
+import session_states
 import sql
 
 st.subheader("Participants")
@@ -63,7 +64,8 @@ class ParticipantsOverview():
             id = df.iloc[index]['id']
             df_sel = df[df['id'] == id]
             st.session_state.participant = df_sel
-            
+            session_states.save_states()
+
             st.session_state.page = self.child_page
             st.rerun()
 

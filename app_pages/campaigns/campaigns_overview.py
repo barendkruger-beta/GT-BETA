@@ -1,4 +1,5 @@
 import streamlit as st
+import session_states
 import pandas as pd
 import sql
 
@@ -37,8 +38,10 @@ def navigate(sel, page):
     st.session_state.scoring_hole = None
     st.session_state.course = None
     st.session_state.course_tee = None
+    session_states.save_states()
     
-    st.session_state.page = page    
+    st.session_state.page = page
+    
     st.rerun()
 
 

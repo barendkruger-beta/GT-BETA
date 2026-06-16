@@ -1,4 +1,5 @@
 import streamlit as st
+import session_states
 import pandas as pd
 import sql
 
@@ -113,7 +114,8 @@ class CourseCourseTees():
     # Open detail page            
     def open(self, sel, page):
         st.session_state.course_tee = sel
-        
+        session_states.save_states()
+
         st.session_state.page = page    
         st.rerun()
 
@@ -130,6 +132,8 @@ with st.spinner('Loading data'):
     with con:
         if st.button(label='', icon=':material/arrow_back:'):
             st.session_state.course = None
+            session_states.save_states()
+            
             st.session_state.page = st_details.parent_page
             st.rerun()
         st.subheader(f"Course: {st.session_state.course['name'].tolist()[0]}")

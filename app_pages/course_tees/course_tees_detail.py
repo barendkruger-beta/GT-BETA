@@ -1,4 +1,5 @@
 import streamlit as st
+import session_states
 import pandas as pd
 import sql
 import math
@@ -167,6 +168,8 @@ with st.spinner('Loading data'):
     with con:
         if st.button(label='', icon=':material/arrow_back:'):
             st.session_state.course_tee = None
+            session_states.save_states()
+
             st.session_state.page = st_details.parent_page
             st.rerun()
         st.subheader(f"Tee: {st.session_state.course_tee['name'].tolist()[0]}")

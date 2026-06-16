@@ -1,4 +1,5 @@
 import streamlit as st
+import session_states
 import pandas as pd
 import sql
 import math
@@ -2010,6 +2011,8 @@ with st.spinner('Loading data'):
     with con:
         if st.button(label='', icon=':material/arrow_back:'):
             st.session_state.scoring_card = None
+            session_states.save_states()
+
             st.session_state.page = st_details.parent_page
             st.rerun()
         if st.button(label='', icon=':material/refresh:'):
