@@ -270,7 +270,8 @@ class st_MatchInfo():
             format_id = formats_df.query(f"name == '{st_format}'")['id'].tolist()[0]
             fields = ["name", "description", "value", "holes", "start_hole", "format_id"]
             values = [st_name, st_description, float(st_value), int(st_holes), int(st_start_hole), format_id]
-            self.sql.update(id=self.match_df['id'].tolist()[0], fields=fields, values=values)
+            #self.sql.update(id=self.match_df['id'].tolist()[0], fields=fields, values=values)
+            sql.write_db(conn=supabase_db, table='matchs', entry_id=self.match_df['id'].tolist()[0], fields=fields, values=values)
             #self.match_df = pd.DataFrame(self.sql.read(filter=f"WHERE table.id = {self.match_df['id'].tolist()[0]}"))
             self.match_df = sql.read_db(conn=supabase_db, table='matchs', filter=[['id', self.match_df['id'].tolist()[0]]], legacy=False)
 
@@ -495,7 +496,7 @@ class ScoringCardDetails():
                 if self.df is not None:
                     #df_sql = sql.scoring_cards()
                     #df_sql.delete(id=self.df['id'].tolist()[0])
-                    sql.delete_db(conn=supabase_db, table='scoring_cards', entry_id=self.df['id'].tolist()[0])
+                    sql.remove_db(conn=supabase_db, table='scoring_cards', filter=[['id', self.df['id'].tolist()[0]]])
                     st.session_state.scoring_card = None
                     st.session_state.page = self.parent_page
                     st.rerun()
@@ -1017,7 +1018,7 @@ class ScoringCardScoring():
             else:
                 scoring_hole_id = self.scoring_hole_df['id'].tolist()[0]
                 #scoring_hole_sql.update(id=scoring_hole_id, fields=fields, values=values)
-                sql.update_db(conn=supabase_db, table='scoring_holes', entry_id=scoring_hole_id, fields=fields, values=values)
+                sql.write_db(conn=supabase_db, table='scoring_holes', entry_id=scoring_hole_id, fields=fields, values=values)
             #self.scoring_hole_df = scoring_hole_sql.read(filter=f"WHERE table.id={scoring_hole_id}")
             self.scoring_hole_df = sql.read_db(conn=supabase_db, table='scoring_holes', filter=[['id', scoring_hole_id]], legacy=False)
             
@@ -1394,7 +1395,7 @@ class ScoringCardGroupParticipants():
 
     def remove_groups(self, id):
         #self.groups_sql.delete(id=id)
-        sql.delete_db(conn=supabase_db, table='scoring_card_groups', entry_id=id)
+        sql.remove_db(conn=supabase_db, table='scoring_card_groups', filter=[['id', id]])
 
     def add_participants(self, selection, groups_df):
         fields = selection.columns.tolist()
@@ -1453,7 +1454,7 @@ class ScoringCardGroupParticipants():
         for entry in selection.to_numpy().tolist():
             # Remove participant
             #self.participants_sql.delete(entry[id_index])
-            sql.delete_db(conn=supabase_db, table='scoring_card_participants', entry_id=entry[id_index])
+            sql.remove_db(conn=supabase_db, table='scoring_card_participants', filter=[['id', entry[id_index]]])
             # Refresh participants
             #self.participants_df = pd.DataFrame(self.participants_sql.read())
             self.participants_df = sql.read_db(conn=supabase_db, table='scoring_card_participants', filter=[['scoring_card_id', self.df['id'].tolist()[0]]], legacy=False)
@@ -1534,14 +1535,14 @@ class ScoringCardGroupParticipants():
             participant_id = participant_df['id'].tolist()[0]
             group_id = participant_df['scoring_card_group_id'].tolist()[0]
             #self.participants_sql.delete(id=participant_id)
-            sql.delete_db(conn=supabase_db, table='scoring_card_participants', entry_id=participant_id)
+            sql.remove_db(conn=supabase_db, table='scoring_card_participants', filter=[['id', participant_id]])
             #self.participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.scoring_card_id={self.df['id'].tolist()[0]}"))
             self.participants_df = sql.read_db(conn=supabase_db, table='scoring_card_participants', filter=[['scoring_card_id', self.df['id'].tolist()[0]]], legacy=False)
             
             if group_id not in self.participants_df['scoring_card_group_id'].tolist():
                 #print('Group can be removed')
                 #self.groups_sql.delete(id=group_id)
-                sql.delete_db(conn=supabase_db, table='scoring_card_groups', entry_id=group_id)
+                sql.remove_db(conn=supabase_db, table='scoring_card_groups', filter=[['id', group_id]])
             
             st.rerun()
     
@@ -2075,7 +2076,7 @@ class ScoringCardsDisplay():
             else:
                 scoring_hole_id = self.scoring_hole_df['id'].tolist()[0]
                 #scoring_hole_sql.update(id=scoring_hole_id, fields=fields, values=values)
-                sql.update_db(conn=supabase_db, table='scoring_holes', id=scoring_hole_id, fields=fields, values=values)
+                sql.write_db(conn=supabase_db, table='scoring_holes', entry_id=scoring_hole_id, fields=fields, values=values)
             self.scoring_hole_df = sql.read_db(conn=supabase_db, table='scoring_holes', filter=[['id', scoring_hole_id]], legacy=False)
             
             # Update eclectic

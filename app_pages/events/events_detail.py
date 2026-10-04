@@ -423,7 +423,7 @@ class st_MatchInfo():
                     print('remove participant')
                     participant_id = self.participants_df.query(f"event_participant_id == {event_participant_id}")['id'].tolist()[0]
                     #self.participants_sql.delete(id=participant_id)
-                    sql.delete_db(conn=supabase_db, table='match_participants', entry_id=participant_id)
+                    sql.remove_db(conn=supabase_db, table='match_participants', filter=[['id', participant_id]])
                     #self.participants_df = self.participants_sql.read(filter=f"WHERE table.match_id = {match_id}")
                     filter = [['match_id', match_id]
                               ]
@@ -434,7 +434,7 @@ class st_MatchInfo():
                 if match_group_id not in self.participants_df['match_group_id'].tolist():
                     print('remove group')
                     #self.groups_sql.delete(id=match_group_id)
-                    sql.delete_db(conn=supabase_db, table='match_groups', entry_id=match_group_id)
+                    sql.remove_db(conn=supabase_db, table='match_groups', filter=[['id', match_group_id]])
                     filter = [['match_id', match_id]
                               ]
                     #self.groups_df = self.groups_sql.read(filter=f"WHERE table.match_id = {match_id}")
@@ -445,7 +445,7 @@ class st_MatchInfo():
                 # Remove all groups and participants
                 for match_group_id in self.groups_df['id'].tolist():
                     #self.groups_sql.delete(id=match_group_id)
-                    sql.delete_db(conn=supabase_db, table='match_groups', entry_id=match_group_id)
+                    sql.remove_db(conn=supabase_db, table='match_groups', filter=[['id', match_group_id]])
                     self.groups_df = None
                     self.participants_df = None
             
@@ -457,7 +457,7 @@ class st_MatchInfo():
             if st.button(label='Yes'):
                 if self.match_df is not None:
                     #self.sql.delete(id=self.match_df['id'].tolist()[0])
-                    sql.delete_db(conn=supabase_db, table='matchs', entry_id=self.match_df['id'].tolist()[0])
+                    sql.remove_db(conn=supabase_db, table='matchs', filter=[['id', self.match_df['id'].tolist()[0]]])
                     st.rerun()
             if st.button(label='No'):
                 st.rerun() 
@@ -1093,7 +1093,7 @@ class EventMatches():
                     if participant not in st_participants:
                         participant_id = match_participants_df[match_participants_df['name']==participant]['id'].tolist()[0]
                         #self.participants_sql.delete(id=participant_id)
-                        sql.delete_db(conn=supabase_db, table='match_participants', entry_id=participant_id)
+                        sql.remove_db(conn=supabase_db, table='match_participants', filter=[['id', participant_id]])
                         continue
             
             # Identify and update groups to be removed
@@ -1105,12 +1105,12 @@ class EventMatches():
                 for group_id in match_groups_df['id'].tolist():
                     if match_participants_df.empty:
                         #self.groups_sql.delete(id=group_id)
-                        sql.delete_db(conn=supabase_db, table='match_groups', entry_id=group_id)
+                        sql.remove_db(conn=supabase_db, table='match_groups', filter=[['id', group_id]])
                         continue
                     
                     if group_id not in match_participants_df['match_group_id'].tolist():
                         #self.groups_sql.delete(id=group_id)
-                        sql.delete_db(conn=supabase_db, table='match_groups', entry_id=group_id)
+                        sql.remove_db(conn=supabase_db, table='match_groups', filter=[['id', group_id]])
                         continue               
             
             st.rerun()
@@ -1175,7 +1175,7 @@ class EventMatches():
     
     def remove(self, match_df=None):
         #self.matches_sql.delete(id=match_df['id'].tolist()[0])
-        sql.delete_db(conn=supabase_db, table='matchs', entry_id=match_df['id'].tolist()[0])
+        sql.remove_db(conn=supabase_db, table='matchs', filter=[['id', match_df['id'].tolist()[0]]])
         st.rerun()
       
         
@@ -1307,7 +1307,7 @@ class EventGroupParticipants():
     
     def remove_groups(self, id):
         #self.groups_sql.delete(id=id)
-        sql.delete_db(conn=supabase_db, table='event_groups', entry_id=id)
+        sql.remove_db(conn=supabase_db, table='event_groups', filter=[['id', id]])
 
     def add_participants(self, selection, groups_df):
         fields = selection.columns.tolist()
@@ -1365,7 +1365,7 @@ class EventGroupParticipants():
         for entry in selection.to_numpy().tolist():
             # Remove participant
             #self.participants_sql.delete(entry[id_index])
-            sql.delete_db(conn=supabase_db, table='event_participants', entry_id=entry[id_index])
+            sql.remove_db(conn=supabase_db, table='event_participants', filter=[['id', entry[id_index]]])
             # Refresh participants
             #self.participants_df = pd.DataFrame(self.participants_sql.read())
             self.participants_df = sql.read_db(conn=supabase_db, table='event_participants', filter=[['event_id', self.event_df['id'].tolist()[0]]], legacy=False)

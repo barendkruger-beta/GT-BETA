@@ -72,8 +72,9 @@ class ParticipantDetails():
         df_active = df['active'].tolist()[0]
         
         # Update each campaign participant
-        campaign_participants_sql = sql.campaign_participants()
-        campaign_participants_df = pd.DataFrame(campaign_participants_sql.read(filter=f"WHERE table.participant_id = {df_id}"))
+        #campaign_participants_sql = sql.campaign_participants()
+        #campaign_participants_df = pd.DataFrame(campaign_participants_sql.read(filter=f"WHERE table.participant_id = {df_id}"))
+        campaign_participants_df = sql.read_db(conn=supabase_db, table='campaign_participants', filter=[['participant_id', df_id]])
         if not campaign_participants_df.empty:
             for campaign_participant_id in campaign_participants_df['id'].tolist():
                 fields = ['name', 'description', 'active']

@@ -26,6 +26,11 @@ def load_app():
             if not user_df.empty:
                 st.session_state.user_participant_id = user_df.at[user_df.index[0], 'id']
                 print(f'Loaded user_participant_id: {st.session_state.user_participant_id}')
+                if user_email in st.secrets.superusers.emails:
+                    st.session_state.global_admin = True
+                    print(f'Super User: {user_df['name'].tolist()[0]}')
+                else:
+                    st.session_state.global_admin  = False
             else:
                 print(f'No user found for email: {user_email}')
         else:
