@@ -4,12 +4,13 @@ import pandas as pd
 import sql
 
 # Classic Load page dataframe
-df_sql = sql.campaigns()
-df = pd.DataFrame(df_sql.read())
+#df_sql = sql.campaigns()
+#df = pd.DataFrame(df_sql.read())
 
 # New Load page dataframe
-#supabase_db = sql.get_supabase_admin()
-#df = pd.DataFrame(sql.read_db(conn=supabase_db, table='campaigns'))
+supabase_db = sql.get_supabase_admin()
+#df = pd.DataFrame(sql.read_db(conn=supabase_db, table='campaigns', legacy=False))
+df = sql.read_db(conn=supabase_db, table='campaigns', legacy=False)
 
 # Set next detail page
 detail_page = "app_pages/campaigns/campaigns_detail.py"
@@ -23,8 +24,8 @@ def add():
     if st.button("Submit"):
         fields = ["name", "description", "active"]
         values = [name, description, active]
-        df_sql.add(fields=fields, values=values)
-        #entry_id = sql.write_db(conn=supabase_db, table='campaigns', fields=fields, values=values)
+        #df_sql.add(fields=fields, values=values)
+        sql.write_db(conn=supabase_db, table='campaigns', fields=fields, values=values)
         st.rerun()
 
 # Open detail page                        
@@ -35,7 +36,7 @@ def navigate(sel, page):
     st.session_state.competition = None
     st.session_state.event = None 
     st.session_state.scoring_card = None 
-    st.session_state.scoring_hole = None
+    st.session_state.hole_number = None
     st.session_state.course = None
     st.session_state.course_tee = None
     session_states.save_states()
@@ -48,35 +49,38 @@ def navigate(sel, page):
 # Populate page       
 st.subheader("Campaigns")
 
-col = st.container(horizontal=True, width='stretch')
-with col:
-    if st.button(label='', icon=':material/add_2:', disabled=False): add()
-
 column_config = {key: None for key in df.columns.to_list()}
 column_config['name'] = st.column_config.TextColumn(label='Name')
 column_config['description'] = st.column_config.TextColumn(label='Description')
 column_config['active'] = st.column_config.CheckboxColumn(label='Active')
-
 #print(column_config)
-event = st.dataframe(
-    df,
-    on_select='rerun',
-    selection_mode=['single-row','single-cell'],
-    hide_index=True,
-    column_config=column_config
-)
 
-id = None
-if len(event.selection['rows']):
-    id = df.iloc[event.selection['rows'][0]]['id']
-elif len(event.selection['cells']):
-    id = df.iloc[event.selection['cells'][0][0]]['id']
-if id is not None:
-    #print('ID is not none')
-    sel = df[df['id'] == id]
-    if col.button(label='', icon=':material/jump_to_element:'):
-        navigate(sel, detail_page)
-else:
-    col.button(label='', icon=':material/jump_to_element:', disabled=True)
+@st.fragment
+def fragment_campaigns():
+    col = st.container(horizontal=True, width='stretch')
+    with col:
+        if st.button(label='', icon=':material/add_2:', disabled=False): add()
+
+    event = st.dataframe(
+        df,
+        on_select='rerun',
+        selection_mode=['single-row','single-cell'],
+        hide_index=True,
+        column_config=column_config
+    )
+
+    id = None
+    if len(event.selection['rows']):
+        id = df.iloc[event.selection['rows'][0]]['id']
+    elif len(event.selection['cells']):
+        id = df.iloc[event.selection['cells'][0][0]]['id']
+    if id is not None:
+        #print('ID is not none')
+        sel = df[df['id'] == id]
+        if col.button(label='', icon=':material/jump_to_element:'):
+            navigate(sel, detail_page)
+    else:
+        col.button(label='', icon=':material/jump_to_element:', disabled=True)
+fragment_campaigns()
 
 st.markdown(body=f'<p style="font-size:10px;">User: {st.user.email.lower()}</p>', unsafe_allow_html=True)

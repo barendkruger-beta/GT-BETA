@@ -3,20 +3,37 @@ import sql
 import session_states
 import pages
 from datetime import datetime
-#from st_supabase_connection import SupabaseConnection
-#from supabase import create_client, Client
+from supabase import create_client, Client
 
-#if st.button(label='Log Out'):
-#    st.logout()
 
 def login_screen():
     st.header("Please log in")
     if st.button("Log in with Google"):
         st.login()
+    if st.button("Refresh"):
+        st.rerun()
 
 def load_app():
+    supabase_db = sql.get_supabase_admin()
+
+    if 'user_participant_id' not in st.session_state:
+        # Load user participant_id from database
+        if st.user.is_logged_in:
+            user_email = st.user.email.lower()
+            #user_sql = sql.users()
+            #user_df = user_sql.read(filter=f"WHERE table.email = '{user_email}'")
+            user_df = sql.read_db(conn=supabase_db, table='participants', filter=[['email', user_email]], legacy=False)
+            if not user_df.empty:
+                st.session_state.user_participant_id = user_df.at[user_df.index[0], 'id']
+                print(f'Loaded user_participant_id: {st.session_state.user_participant_id}')
+            else:
+                print(f'No user found for email: {user_email}')
+        else:
+            print('User is not logged in')
+    
     # Initialize session states
     session_states.init()
+    session_states.load_states()
     
     # Auto logout if session is older than x days
     max_days = 7
@@ -27,10 +44,7 @@ def load_app():
     if diff.days >= max_days:
         st.logout()
         st.rerun()
-
-    # Initialize SQL database
-    init = sql.init()
-    
+   
     # Page navigation
     app_pages = pages.Pages()
     app_pages.dyn_pages_refresh()
@@ -43,55 +57,9 @@ def load_app():
             st.switch_page(page)                
     pg.run()
 
+
 if not st.user.is_logged_in:
     # Show login screen
     login_screen()
 else:
-    if 'user_participant_id' not in st.session_state:
-        participants_sql = sql.participants()
-        participants_df = participants_sql.read()
-
-        user_email = st.user.email.lower()
-        participant_df = participants_df.query(f"email == '{user_email}'")
-        
-        if not participant_df.empty:
-            #print(participant_df)
-            st.session_state.user_participant_id = participant_df['id'].tolist()[0]
-            session_states.load_states()
-    load_app()
-    
-if False:
-    def init_connection():
-        url = st.secrets["supabase"]["SUPABASE_URL"]
-        key = st.secrets["supabase"]["SUPABASE_KEY"]
-        return create_client(url, key)
-
-    def run_query():
-        return supabase.table("campaign_participants").select("*").execute()
-
-    def read_table_foreign_keys(table):
-        data = supabase.rpc("read_table_foreign_keys", {"target_table_name": f"'{table}'"}).execute()
-        return data
-
-    if not st.user.is_logged_in:
-        # Show login screen
-        login_screen()
-    else:
-
-        supabase = init_connection()
-
-        #rows = run_query()
-        rows = read_table_foreign_keys('campaign_participants')
-
-        #resp = supabase.rpc(
-        #"read_table_foreign_keys",
-        #{"target_table_name": "campaign_participants"}
-        #).execute()
-
-        #print(resp)
-        #print(resp.data)
-
-        print(rows)
-        #for row in rows.data:
-        #    st.write(f"{row['name']}")
-        ##load_app()
+    conn = load_app()

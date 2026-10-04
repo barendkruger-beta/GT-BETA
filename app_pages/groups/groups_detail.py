@@ -3,6 +3,9 @@ import session_states
 import pandas as pd
 import sql
 
+global_admin = False
+# New Load page dataframe
+supabase_db = sql.get_supabase_admin()
 
 class GroupDetails():
     obj = None
@@ -12,7 +15,7 @@ class GroupDetails():
            
     def __init__(self, df=None):
         self.obj = st.expander(label='Details', expanded=True)
-        self.df_sql = sql.groups()
+        #self.df_sql = sql.groups()
         self.df = df
         df_id = df['id'].tolist()[0]
         
@@ -43,8 +46,10 @@ class GroupDetails():
             if st.button('Update'):
                 fields = ['name', 'description', 'active']
                 values = [name, description, active]
-                self.df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
-                st.session_state.group = self.df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+                #self.df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
+                sql.write_db(conn=supabase_db, table='groups', entry_id=self.df['id'].tolist()[0], fields=fields, values=values)
+                #st.session_state.group = self.df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+                st.session_state.group = sql.read_db(conn=supabase_db, table='groups', filter=[['id',self.df['id'].tolist()[0]]])
                 
                 if st_update_all == 'All':
                     self.update_downstream()
@@ -61,41 +66,51 @@ class GroupDetails():
         df_active = df['active'].tolist()[0]
         
         # Update each campaign group
-        campaign_groups_sql = sql.campaign_groups()
-        campaign_groups_df = pd.DataFrame(campaign_groups_sql.read(filter=f"WHERE table.group_id = {df_id}"))
+        #campaign_groups_sql = sql.campaign_groups()
+        #campaign_groups_df = pd.DataFrame(campaign_groups_sql.read(filter=f"WHERE table.group_id = {df_id}"))
+        campaign_groups_df = sql.read_db(conn=supabase_db, table='campaign_groups', filter=[['group_id', df_id]], legacy=False)
         if not campaign_groups_df.empty:
             for campaign_group_id in campaign_groups_df['id'].tolist():
                 fields = ['name', 'description', 'active']
                 values = [df_name, df_description, df_active]
-                campaign_groups_sql.update(id=campaign_group_id, fields=fields, values=values)
+                #campaign_groups_sql.update(id=campaign_group_id, fields=fields, values=values)
+                sql.write_db(conn=supabase_db, table='campaign_groups', entry_id=campaign_group_id, fields=fields, values=values)
                 
                 # Update each competition group
-                competition_groups_sql = sql.competition_groups()
-                competition_groups_df = pd.DataFrame(competition_groups_sql.read(filter=f"WHERE table.campaign_group_id = {campaign_group_id}"))
+                #competition_groups_sql = sql.competition_groups()
+                #competition_groups_df = pd.DataFrame(competition_groups_sql.read(filter=f"WHERE table.campaign_group_id = {campaign_group_id}"))
+                competition_groups_df = sql.read_db(conn=supabase_db, table='competition_groups', filter=[['campaign_group_id', campaign_group_id]], legacy=False)
                 if not competition_groups_df.empty:
                     for competition_group_id in competition_groups_df['id'].tolist():
-                        competition_groups_sql.update(id=competition_group_id, fields=fields, values=values)
+                        #competition_groups_sql.update(id=competition_group_id, fields=fields, values=values)
+                        sql.write_db(conn=supabase_db, table='competition_groups', entry_id=competition_group_id, fields=fields, values=values)
                 
                         # Update each event group
-                        event_groups_sql = sql.event_groups()
-                        event_groups_df = pd.DataFrame(event_groups_sql.read(filter=f"WHERE table.competition_group_id = {competition_group_id}"))
+                        #event_groups_sql = sql.event_groups()
+                        #event_groups_df = pd.DataFrame(event_groups_sql.read(filter=f"WHERE table.competition_group_id = {competition_group_id}"))
+                        event_groups_df = sql.read_db(conn=supabase_db, table='event_groups', filter=[['competition_group_id', competition_group_id]], legacy=False)
                         if not event_groups_df.empty:
                             for event_group_id in  event_groups_df['id'].tolist():
-                                event_groups_sql.update(id=event_group_id, fields=fields, values=values)
+                                #event_groups_sql.update(id=event_group_id, fields=fields, values=values)
+                                sql.write_db(conn=supabase_db, table='event_groups', entry_id=event_group_id, fields=fields, values=values)
                                 
                                 # Update each scoring card group
-                                scoring_groups_sql = sql.scoring_card_groups()
-                                scoring_groups_df = pd.DataFrame(scoring_groups_sql.read(filter=f"WHERE table.event_group_id = {event_group_id}"))
+                                #scoring_groups_sql = sql.scoring_card_groups()
+                                #scoring_groups_df = pd.DataFrame(scoring_groups_sql.read(filter=f"WHERE table.event_group_id = {event_group_id}"))
+                                scoring_groups_df = sql.read_db(conn=supabase_db, table='scoring_card_groups', filter=[['event_group_id', event_group_id]], legacy=False)
                                 if not scoring_groups_df.empty:
                                     for scoring_group_id in scoring_groups_df['id'].tolist():
-                                        scoring_groups_sql.update(id=scoring_group_id, fields=fields, values=values)
+                                        #scoring_groups_sql.update(id=scoring_group_id, fields=fields, values=values)
+                                        sql.write_db(conn=supabase_db, table='scoring_card_groups', entry_id=scoring_group_id, fields=fields, values=values)
                     
                                 # Update each match group
-                                match_groups_sql = sql.match_groups()
-                                match_groups_df = pd.DataFrame(match_groups_sql.read(filter=f"WHERE table.event_group_id = {event_group_id}"))
+                                #match_groups_sql = sql.match_groups()
+                                #match_groups_df = pd.DataFrame(match_groups_sql.read(filter=f"WHERE table.event_group_id = {event_group_id}"))
+                                match_groups_df = sql.read_db(conn=supabase_db, table='match_groups', filter=[['event_group_id', event_group_id]], legacy=False)
                                 if not match_groups_df.empty:
                                     for match_group_id in match_groups_df['id'].tolist():
-                                        match_groups_sql.update(id=match_group_id, fields=fields, values=values)
+                                        #match_groups_sql.update(id=match_group_id, fields=fields, values=values)
+                                        sql.write_db(conn=supabase_db, table='match_groups', entry_id=match_group_id, fields=fields, values=values)
     
     
     @st.dialog(title='Delete confirmation')        
@@ -105,8 +120,9 @@ class GroupDetails():
         with area:
             if st.button(label='Yes'):
                 if self.df is not None:
-                    self.df_sql.delete(id=self.df['id'].tolist()[0])
-                    st.session_state.course = None
+                    #self.df_sql.delete(id=self.df['id'].tolist()[0])
+                    sql.remove_db(conn=supabase_db, table='groups', filter=[['id', self.df['id'].tolist()[0]]], legacy=False)
+                    st.session_state.group = None
                     st.session_state.page = self.parent_page
                     st.rerun()
             if st.button(label='No'):

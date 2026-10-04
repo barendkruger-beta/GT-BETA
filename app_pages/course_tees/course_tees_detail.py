@@ -4,6 +4,10 @@ import pandas as pd
 import sql
 import math
 
+global_admin = False
+# New Load page dataframe
+supabase_db = sql.get_supabase_admin()
+
 class CourseTeeDetails():
     obj = None
     df_sql = None
@@ -12,7 +16,7 @@ class CourseTeeDetails():
            
     def __init__(self, df=None):
         self.obj = st.expander(label='Details')
-        self.df_sql = sql.course_tees()
+        #self.df_sql = sql.course_tees()
         self.df = df
         df_id = df['id'].tolist()[0]
         self.parent_page = "app_pages/courses/courses_detail.py"
@@ -38,8 +42,10 @@ class CourseTeeDetails():
         if self.df is not None:
             fields = ['name', 'description', 't_par', 't_rating', 't_slope', 'active']
             values = [name, description, par, rating, slope, active]
-            self.df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
-            st.session_state.course_tee = self.df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+            #self.df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
+            sql.write_db(conn=supabase_db, table='course_tees', entry_id=self.df['id'].tolist()[0], fields=fields, values=values)
+            #st.session_state.course_tee = self.df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+            st.session_state.course_tee = sql.read_db(conn=supabase_db, table='course_tees', filter=[['id', self.df['id'].tolist()[0]]], legacy=False)
             st.rerun()
             
     @st.dialog(title='Delete confirmation')        
@@ -49,7 +55,8 @@ class CourseTeeDetails():
         with area:
             if st.button(label='Yes'):
                 if self.df is not None:
-                    self.df_sql.delete(id=self.df['id'].tolist()[0])
+                    #self.df_sql.delete(id=self.df['id'].tolist()[0])
+                    sql.remove_db(conn=supabase_db, table='course_tees', filter=[['id', self.df['id'].tolist()[0]]], legacy=False)
                     st.session_state.course_tee = None
                     st.session_state.page = self.parent_page
                     st.rerun()
@@ -66,9 +73,10 @@ class CourseTeeHoles():
     def __init__(self, df=None):
         self.obj = st.expander(label='Holes', expanded=True)
         
-        self.df_sql = sql.course_tees()
+        #self.df_sql = sql.course_tees()
         df_id = df['id'].tolist()[0]
-        self.df = self.df_sql.read(f"WHERE table.id={df_id}")
+        #self.df = self.df_sql.read(f"WHERE table.id={df_id}")
+        self.df = sql.read_db(conn=supabase_db, table='course_tees', filter=[['id', df_id]], legacy=False)
         df_id = df['id'].tolist()[0]        
 
         self.card_df = self.load(df=self.df)
@@ -146,12 +154,14 @@ class CourseTeeHoles():
                     if (index+1) <= 9: hole = index + 1
                     else:                        
                         hole = index
-                    self.df_sql.update(id=self.df['id'].tolist()[0], fields=[f't{hole}_{column.lower()}'], values=[value])
+                    #self.df_sql.update(id=self.df['id'].tolist()[0], fields=[f't{hole}_{column.lower()}'], values=[value])
+                    sql.write_db(conn=supabase_db, table='course_tees', entry_id=self.df['id'].tolist()[0], fields=[f't{hole}_{column.lower()}'], values=[value])
                 else:
                     #print(edited_rows)
                     pass
         df_id = self.df['id'].tolist()[0]
-        self.df = self.df_sql.read(f"WHERE table.id={df_id}") 
+        #self.df = self.df_sql.read(f"WHERE table.id={df_id}") 
+        self.df = sql.read_db(conn=supabase_db, table='course_tees', filter=[['id', df_id]], legacy=False)
         self.card_df = self.load(df=self.df)
                         
         #print(self.card_df)

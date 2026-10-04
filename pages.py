@@ -18,7 +18,7 @@ class Pages():
                     courses_page,
                     groups_page,
                     participants_page,
-                    db_page,
+                    #db_page,
                 ],
                 }
 

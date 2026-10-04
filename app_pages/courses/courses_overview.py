@@ -3,9 +3,14 @@ import session_states
 import pandas as pd
 import sql
 
+global_admin = False
+# New Load page dataframe
+supabase_db = sql.get_supabase_admin()
+
 # Load page dataframe
-df_sql = sql.courses()
-df = pd.DataFrame(df_sql.read())
+#df_sql = sql.courses()
+#df = pd.DataFrame(df_sql.read())
+df = sql.read_db(conn=supabase_db, table='courses', filter=None, legacy=False)
 
 # Set next detail page
 detail_page = "app_pages/courses/courses_detail.py"
@@ -18,7 +23,8 @@ def add():
     if st.button("Submit"):
         fields = ["name", "description"]
         values = [name, description]
-        df_sql.add(fields=fields, values=values)
+        #df_sql.add(fields=fields, values=values)
+        sql.write_db(conn=supabase_db, table='courses', fields=fields, values=values)
         st.rerun()
 
 # Open detail page                        

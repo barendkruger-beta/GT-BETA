@@ -3,6 +3,203 @@ import session_states
 import pandas as pd
 import sql
 
+def change_to_parent_page(page):
+    st.session_state.event = None
+    session_states.save_states()
+    st.session_state.page = page
+
+global_admin = False
+# New Load page dataframe
+supabase_db = sql.get_supabase_admin()
+
+class DBData():
+    user_df = None
+    campaign_df = None
+    competition_df = None
+    competition_groups_df = None
+    competition_participants_df = None
+    event_df = None
+    event_groups_df = None
+    other_groups_df = None
+    event_participants_df = None
+    other_participants_df = None
+    matches_df = None
+    matches_groups_df = None
+    matches_participants_df = None
+    matches_holes_df = None
+    formats_df = None
+    scoring_cards_df = None
+    scoring_cards_groups_df = None
+    scoring_cards_participants_df = None
+    scoring_rounds_df = None
+    scoring_holes_df = None
+    courses_df = None
+    course_tees_df = None
+
+    def __init__(self):
+        # Load user role
+        filter = [['email', st.user.email.lower()],
+                    ]
+        self.user_df = sql.read_db(conn=supabase_db, table='participants', filter=filter, legacy=False)
+
+        # Load event data
+        self.load_event_data()
+
+        # Load event scoring cards
+        self.load_event_scoring_cards()
+
+        # Load event matches
+        self.load_event_matches()
+
+        # Load event individuals
+        self.load_event_individuals()
+
+    def load_event_data(self):
+        with st.spinner('Loading event data...'):
+            self.campaign_df = st.session_state['campaign']
+            campaign_id = st.session_state['campaign']['id'].tolist()[0]
+
+            # Load competition
+            self.competition_df = st.session_state['competition']
+            competition_id = st.session_state['competition']['id'].tolist()[0]
+
+            # Load event
+            event_id = st.session_state['event']['id'].tolist()[0]
+            self.event_df = sql.read_db(conn=supabase_db, table='events', filter=[['id', event_id]], legacy=False)
+
+            # Load event groups
+            filter = [['event_id', event_id]
+                      ]
+            self.event_groups_df = sql.read_db(conn=supabase_db, table='event_groups', filter=filter, legacy=False)
+            if not self.event_groups_df.empty: self.event_groups_df = self.event_groups_df.sort_values(by=['active', 'name'], ascending=[False, True])
+
+            # Load other groups
+            filter = [['competition_id', competition_id]
+                      ]
+            self.competition_groups_df = sql.read_db(conn=supabase_db, table='competition_groups', filter=filter, legacy=False)
+            if not self.competition_groups_df.empty: self.competition_groups_df = self.competition_groups_df.sort_values(by=['active', 'name'], ascending=[False, True])
+
+            # Filter out groups that are already assigned
+            if not self.event_groups_df.empty: self.other_groups_df = self.competition_groups_df.drop(self.event_groups_df['competition_group_id'].tolist(), inplace=False)
+            else: self.other_groups_df = self.competition_groups_df
+
+            # Load event participants
+            filter = [['event_id', event_id]
+                      ]
+            self.event_participants_df = sql.read_db(conn=supabase_db, table='event_participants', filter=filter, legacy=False)
+
+            # Load other participants
+            filter = [['competition_id', competition_id]
+                      ]
+            self.competition_participants_df = sql.read_db(conn=supabase_db, table='competition_participants', filter=filter, legacy=False)
+
+            # Filter out participants that are already assigned
+            if not self.event_participants_df.empty: self.other_participants_df = self.competition_participants_df.drop(self.event_participants_df['competition_participant_id'].tolist(), inplace=False)
+            else: self.other_participants_df = self.competition_participants_df
+
+    def load_event_scoring_cards(self):
+        with st.spinner('Loading scoring cards...'):
+            event_id = self.event_df['id'].tolist()[0]
+
+            # Load scoring cards
+            self.scoring_cards_df = sql.read_db(conn=supabase_db, table='scoring_cards', filter=[['event_id', event_id]], legacy=False)
+            if not self.scoring_cards_df.empty: self.scoring_cards_df = self.scoring_cards_df.sort_values(by=['sequence','name'])
+            scoring_cards_ids = self.scoring_cards_df['id'].tolist() if self.scoring_cards_df is not None and not self.scoring_cards_df.empty else []
+
+            # Load scoring card groups
+            filter = [['scoring_card_id', scoring_cards_ids]
+                      ]
+            self.scoring_cards_groups_df = sql.read_db(conn=supabase_db, table='scoring_card_groups', filter=filter, legacy=False)
+            if not self.scoring_cards_groups_df.empty: self.scoring_cards_groups_df = self.scoring_cards_groups_df.sort_values(by=['name'])
+
+            # Load scoring card participants
+            filter = [['scoring_card_id', scoring_cards_ids]
+                      ]
+            self.scoring_cards_participants_df = sql.read_db(conn=supabase_db, table='scoring_card_participants', filter=filter, legacy=False)
+            if not self.scoring_cards_participants_df.empty: self.scoring_cards_participants_df = self.scoring_cards_participants_df.sort_values(by=['name'])
+
+            # Load courses
+            self.courses_df = sql.read_db(conn=supabase_db, table='courses', filter=None, legacy=False)
+            if not self.courses_df.empty: self.courses_df = self.courses_df.sort_values(by=['name'])
+
+    def load_event_matches(self):
+        with st.spinner('Loading matches...'):  
+            # Load event matches
+            event_ids = self.event_df['id'].tolist() if self.event_df is not None and not self.event_df.empty else []
+            filter = [['event_id', event_ids]
+                    ]
+            self.matches_df = sql.read_db(conn=supabase_db, table='matchs', filter=filter, legacy=False)        
+            if not self.matches_df.empty: self.matches_df = self.matches_df.sort_values(by=['event_id', 'sequence', 'name'])
+
+            # Load match groups
+            match_ids = self.matches_df['id'].tolist() if self.matches_df is not None and not self.matches_df.empty else []
+            filter = [['match_id', match_ids]
+                    ]
+            self.matches_groups_df = sql.read_db(conn=supabase_db, table='match_groups', filter=filter, legacy=False)
+            if not self.matches_groups_df.empty: self.matches_groups_df = self.matches_groups_df.sort_values(by=['match_id', 'name'])
+            
+            # Load match participants
+            match_ids = self.matches_df['id'].tolist() if self.matches_df is not None and not self.matches_df.empty else []
+            filter = [['match_id', match_ids]
+                    ]
+            self.matches_participants_df = sql.read_db(conn=supabase_db, table='match_participants', filter=filter, legacy=False)
+            if not self.matches_participants_df.empty: self.matches_participants_df = self.matches_participants_df.sort_values(by=['match_id', 'name'])
+
+            # Load match holes
+            match_ids = self.matches_df['id'].tolist() if self.matches_df is not None and not self.matches_df.empty else []
+            filter = [['match_id', match_ids]
+                ]
+            self.matches_holes_df = sql.read_db(conn=supabase_db, table='match_holes', filter=filter, legacy=False)
+            if not self.matches_holes_df.empty: self.matches_holes_df = self.matches_holes_df.sort_values(by=['match_id', 'number', 'name'])
+
+            # Load formats
+            self.formats_df = sql.read_db(conn=supabase_db, table='formats', filter=None, legacy=False)
+            if not self.formats_df.empty: self.formats_df = self.formats_df.sort_values(by=['name'])
+
+    def load_event_individuals(self):
+        with st.spinner('Loading individuals...'):
+            # Events
+            if self.event_df.empty: return
+            events_ids = self.event_df['id'].tolist()
+
+            # Scoring cards
+            filter = [['event_id', events_ids]
+                      ]
+            self.scoring_cards_df = sql.read_db(conn=supabase_db, table='scoring_cards', filter=filter, legacy=False)
+            if not self.scoring_cards_df.empty: self.scoring_cards_df = self.scoring_cards_df.sort_values(by=['sequence', 'name'])
+            else: return
+            scoring_cards_ids = self.scoring_cards_df['id'].tolist()
+
+            # Scoring card participants
+            filter = [['scoring_card_id', scoring_cards_ids]
+                      ]
+            self.scoring_cards_participants_df = sql.read_db(conn=supabase_db, table='scoring_card_participants', filter=filter, legacy=False)
+            if not self.scoring_cards_participants_df.empty: self.scoring_cards_participants_df = self.scoring_cards_participants_df.sort_values(by=['scoring_card_groups_name','name'])
+            else: return
+            scoring_card_participants_ids = self.scoring_cards_participants_df['id'].tolist()
+
+            # Scoring rounds
+            filter = [['scoring_card_participant_id', scoring_card_participants_ids]
+                      ]
+            self.scoring_rounds_df = sql.read_db(conn=supabase_db, table='scoring_rounds', filter=filter, legacy=False)
+            scoring_rounds_ids = self.scoring_rounds_df['id'].tolist()
+            course_tees_ids = self.scoring_rounds_df['course_tee_id'].tolist()
+
+            # Scoring holes
+            filter = [['scoring_round_id', scoring_rounds_ids]
+                      ]
+            self.scoring_holes_df = sql.read_db(conn=supabase_db, table='scoring_holes', filter=filter, legacy=False)
+            if self.scoring_holes_df.empty: return
+
+            # Course Tees
+            filter = [['id', course_tees_ids]
+                      ]
+            self.course_tees_df = sql.read_db(conn=supabase_db, table='course_tees', filter=filter, legacy=False)
+
+    def refresh(self):
+        self.__init__()
+
+data = DBData()
 
 class st_MatchInfo():
     sql = None
@@ -17,12 +214,12 @@ class st_MatchInfo():
     status = None
     
     def __init__(self, match_df=None):
-        self.sql = sql.matches()
+        #self.sql = sql.matches()
         self.match_df = match_df
-        groups_sql = self.groups_sql = sql.match_groups()
-        participants_sql = self.participants_sql = sql.match_participants()
-        scoring_holes_sql = sql.scoring_holes()
-        match_holes_sql = sql.match_holes()
+        #groups_sql = self.groups_sql = sql.match_groups()
+        #participants_sql = self.participants_sql = sql.match_participants()
+        #scoring_holes_sql = sql.scoring_holes()
+        #match_holes_sql = sql.match_holes()
         
         match_id = match_df['id'].tolist()[0]
         match_name = match_df['name'].tolist()[0]
@@ -31,11 +228,11 @@ class st_MatchInfo():
         value = match_df['value'].tolist()[0]
         start_hole = match_df['start_hole'].tolist()[0]
         tot_holes = match_df['holes'].tolist()[0]
-        participants_df = participants_sql.read(filter=f"WHERE table.match_id={match_id}")
+        participants_df = data.matches_participants_df.query(f'match_id=={match_id}')
         if participants_df is not None: participants_df = participants_df.sort_values(by=['match_groups_name', 'name'])
         self.participants_df = participants_df
         #participants_df = participants_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by=['match_groups_name', 'name'])
-        groups_df = groups_sql.read(filter=f"WHERE table.match_id={match_id}")
+        groups_df = data.matches_groups_df.query(f'match_id=={match_id}')
         if groups_df is not None: groups_df = groups_df.sort_values(by=['name'])
         #groups_df = groups_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by=['name'])
         self.groups_df = groups_df
@@ -55,7 +252,8 @@ class st_MatchInfo():
                 group_participant_names.append(participants_df.query(f'match_group_id=={group_id}')['name'].tolist())
             
                 # Points & Holes completed
-                match_holes_df = match_holes_sql.read(filter=f"WHERE table.match_id={match_id} AND table.match_group_id={group_id}")
+                #match_holes_df = match_holes_sql.read(filter=f"WHERE table.match_id={match_id} AND table.match_group_id={group_id}")
+                match_holes_df = data.matches_holes_df.query(f'match_id=={match_id} and match_group_id=={group_id}')
                 if match_holes_df is not None:
                     if not match_holes_df.empty:
                         points = sum(match_holes_df['points'].tolist())
@@ -111,22 +309,28 @@ class st_MatchInfo():
     
     @st.dialog(title='Edit match')
     def edit(self):
-        events_sql = sql.events()
-        event_df = events_sql.read(filter=f"WHERE table.id = {self.match_df['event_id'].tolist()[0]}")
+        #events_sql = sql.events()
+        #event_df = events_sql.read(filter=f"WHERE table.id = {self.match_df['event_id'].tolist()[0]}")
+        event_df = data.event_df.query(f"id == {self.match_df['event_id'].tolist()[0]}")
 
-        event_participants_sql = sql.event_participants()
-        event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id = {event_df['id'].tolist()[0]}")
-        event_groups_sql = sql.event_groups()
-        event_groups_df = event_groups_sql.read(filter=f"WHERE table.event_id = {event_df['id'].tolist()[0]}")
+        #event_participants_sql = sql.event_participants()
+        #event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id = {event_df['id'].tolist()[0]}")
+        event_participants_df = data.event_participants_df.query(f"event_id == {event_df['id'].tolist()[0]}")
+        #event_groups_sql = sql.event_groups()
+        #event_groups_df = event_groups_sql.read(filter=f"WHERE table.event_id = {event_df['id'].tolist()[0]}")
+        event_groups_df = data.event_groups_df.query(f"event_id == {event_df['id'].tolist()[0]}")
 
-        match_participants_sql = sql.match_participants()
-        match_participants_df = match_participants_sql.read(filter=f"WHERE table.match_id = {self.match_df['id'].tolist()[0]}")
-        match_groups_sql = sql.match_groups()
-        match_groups_df = match_groups_sql.read(filter=f"WHERE table.match_id = {self.match_df['id'].tolist()[0]}")
+        #match_participants_sql = sql.match_participants()
+        #match_participants_df = match_participants_sql.read(filter=f"WHERE table.match_id = {self.match_df['id'].tolist()[0]}")
+        match_participants_df = data.matches_participants_df.query(f"match_id == {self.match_df['id'].tolist()[0]}")
+        #match_groups_sql = sql.match_groups()
+        #match_groups_df = match_groups_sql.read(filter=f"WHERE table.match_id = {self.match_df['id'].tolist()[0]}")
+        match_groups_df = data.matches_groups_df.query(f"match_id == {self.match_df['id'].tolist()[0]}")
 
-        formats_sql = sql.formats()
-        formats_df = formats_sql.read()
-        
+        #formats_sql = sql.formats()
+        #formats_df = formats_sql.read()
+        formats_df = data.formats_df
+
         st_name = st.text_input(label="Name", value=self.match_df['name'].tolist()[0])
         st_description = st.text_input(label="Description", value=self.match_df['description'].tolist()[0])
         st_con_format = st.container(horizontal=True, horizontal_alignment='distribute')
@@ -145,9 +349,10 @@ class st_MatchInfo():
             format_id = formats_df.query(f"name == '{st_format}'")['id'].tolist()[0]
             fields = ["name", "description", "value", "holes", "start_hole", "format_id"]
             values = [st_name, st_description, float(st_value), int(st_holes), int(st_start_hole), format_id]
-            self.sql.update(id=self.match_df['id'].tolist()[0], fields=fields, values=values)
-            self.match_df = pd.DataFrame(self.sql.read(filter=f"WHERE table.id = {self.match_df['id'].tolist()[0]}"))
-
+            #self.sql.update(id=self.match_df['id'].tolist()[0], fields=fields, values=values)
+            sql.write_db(conn=supabase_db, table='matchs', entry_id=self.match_df['id'].tolist()[0], fields=fields, values=values)
+            #self.match_df = pd.DataFrame(self.sql.read(filter=f"WHERE table.id = {self.match_df['id'].tolist()[0]}"))
+            self.match_df = sql.read_db(conn=supabase_db, table='matchs', filter=[['id', self.match_df['id'].tolist()[0]]], legacy=False)
             self.update_groups_participants(event_participants_names=st_participants)
             st.rerun()
 
@@ -156,16 +361,21 @@ class st_MatchInfo():
         if len(event_participants_names) > 0:
             match_id = self.match_df['id'].tolist()[0]
             event_id = self.match_df['event_id'].tolist()[0]
-            event_participants_sql = sql.event_participants()
+            #event_participants_sql = sql.event_participants()
             event_participants_names_str = ["'"+s+"'" for s in event_participants_names]
             event_participants_names_str = ','.join(event_participants_names_str)
-            event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id = {event_id} AND table.name IN ({event_participants_names_str})")
+            #event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id = {event_id} AND table.name IN ({event_participants_names_str})")
+            filter = [['event_id', event_id],
+                      ['name', event_participants_names]
+                      ]
+            event_participants_df = data.event_participants_df.query(f"event_id == {event_id}")
             #print(event_participants_df)
             
-            event_groups_sql = sql.event_groups()
+            #event_groups_sql = sql.event_groups()
             event_groups_ids_str = [str(x) for x in event_participants_df['event_group_id'].tolist()]
             event_groups_ids_str = ','.join(event_groups_ids_str)
-            event_groups_df = event_groups_sql.read(filter=f"WHERE table.id IN ({event_groups_ids_str})")
+            #event_groups_df = event_groups_sql.read(filter=f"WHERE table.id IN ({event_groups_ids_str})")
+            event_groups_df = data.event_groups_df.query(f"event_id == {event_id}")
             #print(event_groups_df)
             
             # Add new groups
@@ -176,11 +386,15 @@ class st_MatchInfo():
                 values = [event_group_name, event_group_description, match_id, event_group_id]
                 if self.groups_df is None:
                     print('add first group')
-                    self.groups_sql.add(fields=fields, values=values)
+                    #self.groups_sql.add(fields=fields, values=values)
+                    sql.write_db(conn=supabase_db, table='match_groups', fields=fields, values=values)
                 elif event_group_id not in self.groups_df['event_group_id'].tolist():
                     print('add another group')
-                    self.groups_sql.add(fields=fields, values=values)
-                self.groups_df = self.groups_sql.read(filter=f"WHERE table.match_id = {match_id}")
+                    #self.groups_sql.add(fields=fields, values=values)
+                    sql.write_db(conn=supabase_db, table='match_groups', fields=fields, values=values)
+                filter = [['match_id', match_id]
+                          ]
+                self.groups_df = sql.read_db(conn=supabase_db, table='match_groups', filter=filter, legacy=False)
                     
             # Add new participants
             for event_participant_id in event_participants_df['id'].tolist():
@@ -193,32 +407,45 @@ class st_MatchInfo():
                 #print(f'Check participant [{event_participant_name}] with event_participant_id [{event_participant_id}]')
                 if self.participants_df is None:
                     print('add first participant')
-                    self.participants_sql.add(fields=fields, values=values)
+                    #self.participants_sql.add(fields=fields, values=values)
+                    sql.write_db(conn=supabase_db, table='match_participants', fields=fields, values=values)
                 elif event_participant_id not in self.participants_df['event_participant_id'].tolist():
                     print('add another participant')
-                    self.participants_sql.add(fields=fields, values=values)
-                self.participants_df = self.participants_sql.read(filter=f"WHERE table.match_id = {match_id}")
+                    #self.participants_sql.add(fields=fields, values=values)
+                    sql.write_db
+                filter = [['match_id', match_id]
+                          ]
+                self.participants_df = sql.read_db(conn=supabase_db, table='match_participants', filter=filter, legacy=False)
 
             # Remove other participants
             for event_participant_id in self.participants_df['event_participant_id'].tolist():
                 if event_participant_id not in event_participants_df['id'].tolist():
                     print('remove participant')
                     participant_id = self.participants_df.query(f"event_participant_id == {event_participant_id}")['id'].tolist()[0]
-                    self.participants_sql.delete(id=participant_id)
-                    self.participants_df = self.participants_sql.read(filter=f"WHERE table.match_id = {match_id}")
+                    #self.participants_sql.delete(id=participant_id)
+                    sql.delete_db(conn=supabase_db, table='match_participants', entry_id=participant_id)
+                    #self.participants_df = self.participants_sql.read(filter=f"WHERE table.match_id = {match_id}")
+                    filter = [['match_id', match_id]
+                              ]
+                    self.participants_df = sql.read_db(conn=supabase_db, table='match_participants', filter=filter, legacy=False)
 
             # Remove groups without participants
             for match_group_id in self.groups_df['id'].tolist():
                 if match_group_id not in self.participants_df['match_group_id'].tolist():
                     print('remove group')
-                    self.groups_sql.delete(id=match_group_id)
-                    self.groups_df = self.groups_sql.read(filter=f"WHERE table.match_id = {match_id}")
+                    #self.groups_sql.delete(id=match_group_id)
+                    sql.delete_db(conn=supabase_db, table='match_groups', entry_id=match_group_id)
+                    filter = [['match_id', match_id]
+                              ]
+                    #self.groups_df = self.groups_sql.read(filter=f"WHERE table.match_id = {match_id}")
+                    self.groups_df = sql.read_db(conn=supabase_db, table='match_groups', filter=filter, legacy=False)
 
         else:
             if self.participants_df is not None:
                 # Remove all groups and participants
                 for match_group_id in self.groups_df['id'].tolist():
-                    self.groups_sql.delete(id=match_group_id)
+                    #self.groups_sql.delete(id=match_group_id)
+                    sql.delete_db(conn=supabase_db, table='match_groups', entry_id=match_group_id)
                     self.groups_df = None
                     self.participants_df = None
             
@@ -229,7 +456,8 @@ class st_MatchInfo():
         with area:
             if st.button(label='Yes'):
                 if self.match_df is not None:
-                    self.sql.delete(id=self.match_df['id'].tolist()[0])
+                    #self.sql.delete(id=self.match_df['id'].tolist()[0])
+                    sql.delete_db(conn=supabase_db, table='matchs', entry_id=self.match_df['id'].tolist()[0])
                     st.rerun()
             if st.button(label='No'):
                 st.rerun() 
@@ -260,62 +488,78 @@ class EventDetails():
         
     def update(self, name=None, description=None, active=None):
         if self.df is not None:
-            sql_event = sql.events()
+            #sql_event = sql.events()
             fields = ['name', 'description', 'active']
             values = [name, description, active]
-            sql_event.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
-            st.session_state.event = sql_event.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+            #sql_event.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
+            sql.write_db(conn=supabase_db, table='events', entry_id=self.df['id'].tolist()[0], fields=fields, values=values)
+            #st.session_state.event = sql_event.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+            st.session_state.event = sql.read_db(conn=supabase_db, table='events', filter=[['id', self.df['id'].tolist()[0]]], legacy=False)
 
-            # Propogate event groups 'active'
-            event_id = self.df['id'].tolist()[0]
-            event_groups_sql = sql.event_groups()
-            event_groups_df = pd.DataFrame(event_groups_sql.read(f"WHERE table.event_id = {event_id}"))
-            for event_group_id in event_groups_df['id'].tolist():
-                fields = ['active']
-                values = [active]
-                event_groups_sql.update(id=event_group_id, fields=fields, values=values)
-
-            # Propogate event participants 'active'
-            event_id = self.df['id'].tolist()[0]
-            event_participants_sql = sql.event_participants()
-            event_participants_df = pd.DataFrame(event_participants_sql.read(f"WHERE table.event_id = {event_id}"))
-            for event_participant_id in event_participants_df['id'].tolist():
-                fields = ['active']
-                values = [active]
-                event_participants_sql.update(id=event_participant_id, fields=fields, values=values)
-
-            # Propogate scoring cards 'active'
-            event_id = self.df['id'].tolist()[0]
-            scoring_cards_sql = sql.scoring_cards()
-            scoring_cards_df = pd.DataFrame(scoring_cards_sql.read(f"WHERE table.event_id = {event_id}"))
-            for scoring_card_id in scoring_cards_df['id'].tolist():
-                fields = ['active']
-                values = [active]
-                scoring_cards_sql.update(id=scoring_card_id, fields=fields, values=values)
-
-                # Propogate scoring card groups 'active'
-                scoring_card_groups_sql = sql.scoring_card_groups()
-                scoring_card_groups_df = pd.DataFrame(scoring_card_groups_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
-                for scoring_card_group_id in scoring_card_groups_df['id'].tolist():
+            if active != self.df['active'].tolist()[0]:
+                # Propogate event groups 'active'
+                event_id = self.df['id'].tolist()[0]
+                #event_groups_sql = sql.event_groups()
+                #event_groups_df = pd.DataFrame(event_groups_sql.read(f"WHERE table.event_id = {event_id}"))
+                event_groups_df = sql.read_db(conn=supabase_db, table='event_groups', filter=[['event_id', event_id]], legacy=False)
+                for event_group_id in event_groups_df['id'].tolist():
                     fields = ['active']
                     values = [active]
-                    scoring_card_groups_sql.update(id=scoring_card_group_id, fields=fields, values=values)
+                    #event_groups_sql.update(id=event_group_id, fields=fields, values=values)
+                    sql.write_db(conn=supabase_db, table='event_groups', entry_id=event_group_id, fields=fields, values=values)
 
-                # Propogate scoring card participants 'active'
-                scoring_card_participants_sql = sql.scoring_card_participants()
-                scoring_card_participants_df = pd.DataFrame(scoring_card_participants_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
-                for scoring_card_participant_id in scoring_card_participants_df['id'].tolist():
+                # Propogate event participants 'active'
+                event_id = self.df['id'].tolist()[0]
+                #event_participants_sql = sql.event_participants()
+                #event_participants_df = pd.DataFrame(event_participants_sql.read(f"WHERE table.event_id = {event_id}"))
+                event_participants_df = sql.read_db(conn=supabase_db, table='event_participants', filter=[['event_id', event_id]], legacy=False)
+                for event_participant_id in event_participants_df['id'].tolist():
                     fields = ['active']
                     values = [active]
-                    scoring_card_participants_sql.update(id=scoring_card_participant_id, fields=fields, values=values)
+                    #event_participants_sql.update(id=event_participant_id, fields=fields, values=values)
+                    sql.write_db(conn=supabase_db, table='event_participants', entry_id=event_participant_id, fields=fields, values=values)
 
-                # Propogate scoring rounds 'active'
-                rounds_sql = sql.scoring_rounds()
-                rounds_df = pd.DataFrame(rounds_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
-                for round_id in rounds_df['id'].tolist():
+                # Propogate scoring cards 'active'
+                event_id = self.df['id'].tolist()[0]
+                #scoring_cards_sql = sql.scoring_cards()
+                #scoring_cards_df = pd.DataFrame(scoring_cards_sql.read(f"WHERE table.event_id = {event_id}"))
+                scoring_cards_df = sql.read_db(conn=supabase_db, table='scoring_cards', filter=[['event_id', event_id]], legacy=False)  
+                for scoring_card_id in scoring_cards_df['id'].tolist():
                     fields = ['active']
                     values = [active]
-                    rounds_sql.update(id=round_id, fields=fields, values=values)
+                    #scoring_cards_sql.update(id=scoring_card_id, fields=fields, values=values)
+                    sql.write_db(conn=supabase_db, table='scoring_cards', entry_id=scoring_card_id, fields=fields, values=values)
+
+                    # Propogate scoring card groups 'active'
+                    #scoring_card_groups_sql = sql.scoring_card_groups()
+                    #scoring_card_groups_df = pd.DataFrame(scoring_card_groups_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+                    scoring_card_groups_df = sql.read_db(conn=supabase_db, table='scoring_card_groups', filter=[['scoring_card_id', scoring_card_id]], legacy=False)
+                    for scoring_card_group_id in scoring_card_groups_df['id'].tolist():
+                        fields = ['active']
+                        values = [active]
+                        #scoring_card_groups_sql.update(id=scoring_card_group_id, fields=fields, values=values)
+                        sql.write_db(conn=supabase_db, table='scoring_card_groups', entry_id=scoring_card_group_id, fields=fields, values=values)
+
+                    # Propogate scoring card participants 'active'
+                    #scoring_card_participants_sql = sql.scoring_card_participants()
+                    #scoring_card_participants_df = pd.DataFrame(scoring_card_participants_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+                    scoring_card_participants_df = sql.read_db(conn=supabase_db, table='scoring_card_participants', filter=[['scoring_card_id', scoring_card_id]], legacy=False)
+                    for scoring_card_participant_id in scoring_card_participants_df['id'].tolist():
+                        fields = ['active']
+                        values = [active]
+                        #scoring_card_participants_sql.update(id=scoring_card_participant_id, fields=fields, values=values)
+                        sql.write_db(conn=supabase_db, table='scoring_card_participants', entry_id=scoring_card_participant_id, fields=fields, values=values)
+
+                    # Propogate scoring rounds 'active'
+                    #rounds_sql = sql.scoring_rounds()
+                    #rounds_df = pd.DataFrame(rounds_sql.read(f"WHERE table.scoring_card_id = {scoring_card_id}"))
+                    rounds_df = sql.read_db(conn=supabase_db, table='scoring_rounds', filter=[['scoring_card_id', scoring_card_id]], legacy=False)
+
+                    for round_id in rounds_df['id'].tolist():
+                        fields = ['active']
+                        values = [active]
+                        #rounds_sql.update(id=round_id, fields=fields, values=values)
+                        sql.write_db(conn=supabase_db, table='scoring_rounds', entry_id=round_id, fields=fields, values=values)
 
             st.rerun()
             
@@ -326,8 +570,9 @@ class EventDetails():
         with area:
             if st.button(label='Yes'):
                 if self.df is not None:
-                    sql_event = sql.events()
-                    sql_event.delete(id=self.df['id'].tolist()[0])
+                    #sql_event = sql.events()
+                    #sql_event.delete(id=self.df['id'].tolist()[0])
+                    sql.remove_db(conn=supabase_db, table='events', filter=[['id',self.df['id'].tolist()[0]]])
                     st.session_state.event = None
                     st.session_state.page = self.parent_page
                     st.rerun()
@@ -351,81 +596,91 @@ class EventScoringCards():
         self.child_page = "app_pages/scoring_cards/scoring_cards_detail.py"
         
         self.event_df = event_df
-        self.scoring_cards_sql = sql.scoring_cards()
-        self.scoring_cards_df = pd.DataFrame(self.scoring_cards_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        #self.scoring_cards_sql = sql.scoring_cards()
+        #self.scoring_cards_df = pd.DataFrame(self.scoring_cards_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        self.scoring_cards_df = data.scoring_cards_df
         if not self.scoring_cards_df.empty: self.scoring_cards_df = self.scoring_cards_df.sort_values(by=['sequence','name'])
         
-        self.groups_sql = sql.scoring_card_groups()        
-        self.participants_sql = sql.scoring_card_participants()
+        #self.groups_sql = sql.scoring_card_groups()        
+        #self.participants_sql = sql.scoring_card_participants()
+        self.participants_df = data.scoring_cards_participants_df
         
-        all_groups_sql = sql.event_groups()
-        all_groups_df = pd.DataFrame(all_groups_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        #all_groups_sql = sql.event_groups()
+        #all_groups_df = pd.DataFrame(all_groups_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        all_groups_df = data.event_groups_df
         if not all_groups_df.empty: all_groups_df = all_groups_df.sort_values(by='name')
         else: return
         
-        all_participants_sql = sql.event_participants()
-        all_participants_df = pd.DataFrame(all_participants_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        #all_participants_sql = sql.event_participants()
+        #all_participants_df = pd.DataFrame(all_participants_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        all_participants_df = data.event_participants_df
         if not all_participants_df.empty: all_participants_df = all_participants_df.sort_values(by='name')
         else: return
-        
-        exp_scoring_cards = st.expander("Scoring Cards", expanded=True)
-        with exp_scoring_cards:
-            col = st.container(horizontal=True, width='stretch')
-            
-            scoring_card_df = self.scoring_cards_df
-            if not scoring_card_df.empty:
-                participants_info = []
-                for scoring_card_id in scoring_card_df['id'].tolist():
-                    groups_df = self.groups_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}").sort_values(by='name')
-                    info = str()
-                    for group_name, group_id in zip(groups_df['name'].tolist(), groups_df['id'].tolist()):                    
-                        participants_df = self.participants_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id} AND table.scoring_card_group_id={group_id}").sort_values(by='name')
-                        info+=f"{group_name}[{", ".join(participants_df['name'].tolist())}] "
-                    participants_info.append(info)
-                scoring_card_df['participants'] = participants_info
-                    
-            column_config = {key: None for key in self.scoring_cards_df.columns.to_list()}
-            column_config['name'] = 'Name'
-            #column_config['description'] = 'Description'
-            column_config['participants'] = 'Participants'
-            #column_config['event_participants_name'] = 'Scorer'            
-            scoring_card = st.dataframe(
-                self.scoring_cards_df,
-                on_select='rerun',
-                selection_mode=['single-row', 'single-cell'],
-                hide_index=True,
-                column_config=column_config
-            )
 
-            event_id = self.event_df['id'].tolist()[0]
-            id = None
-            if len(scoring_card.selection['rows']):
-                id = self.scoring_cards_df.iloc[scoring_card.selection['rows'][0]]['id']
-            elif len(scoring_card.selection['cells']):
-                id = self.scoring_cards_df.iloc[scoring_card.selection['cells'][0][0]]['id']
-            if id is not None:
-                sel = self.scoring_cards_df[self.scoring_cards_df['id'] == id]
-                col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card", disabled=True)
-                if col.button(label='', icon=':material/jump_to_element:', key=f"event[{event_id}]_open_scoring_card"): self.open(sel, self.child_page)
-                if col.button(label='', icon=':material/edit:', key=f"event[{event_id}]_edit_scoring_card", disabled=not st.session_state.global_admin): self.edit(scoring_card_df=sel, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
-                if col.button(label='', icon=':material/arrow_upward:', disabled=not st.session_state.global_admin): self.move(sel=sel, up=True)
-                if col.button(label='', icon=':material/arrow_downward:', disabled=not st.session_state.global_admin): self.move(sel=sel, down=True)
-                if col.button(label='', icon=':material/delete:', key=f"event[{event_id}]_remove_scoring_card", disabled=not st.session_state.global_admin): self.remove(scoring_card_df=sel)
-            else:
-                if col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card", disabled=not st.session_state.global_admin): self.add(event_id=event_id, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
-                col.button(label='', icon=':material/jump_to_element:', key=f"event[{event_id}]_open_scoring_card", disabled=True)
-                col.button(label='', icon=':material/edit:', key=f"event[{event_id}]_edit_scoring_card", disabled=True)
-                col.button(label='', icon=':material/arrow_upward:', disabled=True)
-                col.button(label='', icon=':material/arrow_downward:', disabled=True)
-                col.button(label='', icon=':material/delete:', key=f"event[{event_id}]_remove_scoring_card", disabled=True)
-            
+        @st.fragment
+        def fragment_scoring_cards():
+            exp_scoring_cards = st.expander("Scoring Cards", expanded=True)
+            with exp_scoring_cards:
+                col = st.container(horizontal=True, width='stretch')
+                
+                scoring_card_df = self.scoring_cards_df
+                if not scoring_card_df.empty:
+                    participants_info = []
+                    for scoring_card_id in scoring_card_df['id'].tolist():
+                        #groups_df = self.groups_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}").sort_values(by='name')
+                        groups_df = data.scoring_cards_groups_df.query(f"scoring_card_id == {scoring_card_id}")
+                        info = str()
+                        for group_name, group_id in zip(groups_df['name'].tolist(), groups_df['id'].tolist()):                    
+                            #participants_df = self.participants_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id} AND table.scoring_card_group_id={group_id}").sort_values(by='name')
+                            participants_df = data.scoring_cards_participants_df.query(f"scoring_card_id == {scoring_card_id} and scoring_card_group_id == {group_id}").sort_values(by='name')
+                            info+=f"{group_name}[{", ".join(participants_df['name'].tolist())}] "
+                        participants_info.append(info)
+                    scoring_card_df['participants'] = participants_info
+                        
+                column_config = {key: None for key in self.scoring_cards_df.columns.to_list()}
+                column_config['name'] = 'Name'
+                #column_config['description'] = 'Description'
+                column_config['participants'] = 'Participants'
+                #column_config['event_participants_name'] = 'Scorer'            
+                scoring_card = st.dataframe(
+                    self.scoring_cards_df,
+                    on_select='rerun',
+                    selection_mode=['single-row', 'single-cell'],
+                    hide_index=True,
+                    column_config=column_config
+                )
+
+                event_id = self.event_df['id'].tolist()[0]
+                id = None
+                if len(scoring_card.selection['rows']):
+                    id = self.scoring_cards_df.iloc[scoring_card.selection['rows'][0]]['id']
+                elif len(scoring_card.selection['cells']):
+                    id = self.scoring_cards_df.iloc[scoring_card.selection['cells'][0][0]]['id']
+                if id is not None:
+                    sel = self.scoring_cards_df[self.scoring_cards_df['id'] == id]
+                    col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card", disabled=True)
+                    if col.button(label='', icon=':material/jump_to_element:', key=f"event[{event_id}]_open_scoring_card"): self.open(sel, self.child_page)
+                    if col.button(label='', icon=':material/edit:', key=f"event[{event_id}]_edit_scoring_card", disabled=not st.session_state.global_admin): self.edit(scoring_card_df=sel, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
+                    if col.button(label='', icon=':material/arrow_upward:', disabled=not st.session_state.global_admin): self.move(sel=sel, up=True)
+                    if col.button(label='', icon=':material/arrow_downward:', disabled=not st.session_state.global_admin): self.move(sel=sel, down=True)
+                    if col.button(label='', icon=':material/delete:', key=f"event[{event_id}]_remove_scoring_card", disabled=not st.session_state.global_admin): self.remove(scoring_card_df=sel)
+                else:
+                    if col.button(label='', icon=':material/add_2:', key=f"event[{event_id}]_add_scoring_card", disabled=not st.session_state.global_admin): self.add(event_id=event_id, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
+                    col.button(label='', icon=':material/jump_to_element:', key=f"event[{event_id}]_open_scoring_card", disabled=True)
+                    col.button(label='', icon=':material/edit:', key=f"event[{event_id}]_edit_scoring_card", disabled=True)
+                    col.button(label='', icon=':material/arrow_upward:', disabled=True)
+                    col.button(label='', icon=':material/arrow_downward:', disabled=True)
+                    col.button(label='', icon=':material/delete:', key=f"event[{event_id}]_remove_scoring_card", disabled=True)
+        fragment_scoring_cards()
+   
     def update_date(self):
             self.df_date = str(st.session_state.event_sc_date)
             
     # Add dialog
     @st.dialog("Add Scoring Card")
     def add(self, event_id=None, all_groups_df=None, all_participants_df=None):
-        courses_df = sql.courses().read()
+        #courses_df = sql.courses().read()
+        courses_df = data.courses_df
         
         st_name = st.text_input("Name")
         st_description = st.text_input("Description")
@@ -452,9 +707,11 @@ class EventScoringCards():
                 values = [st_name, st_description, event_id, event_scorer_id, event_course_id, sequence, f"'{st.session_state.event_sc_date}'"]
                 
                 # Create scoring card
-                scoring_card_id = self.scoring_cards_sql.add(fields=fields, values=values)
-                self.scoring_cards_df = pd.DataFrame(self.scoring_cards_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
-                
+                #scoring_card_id = self.scoring_cards_sql.add(fields=fields, values=values)
+                scoring_card_id = sql.write_db(conn=supabase_db, table='scoring_cards', fields=fields, values=values)
+                #self.scoring_cards_df = pd.DataFrame(self.scoring_cards_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+                self.scoring_cards_df = sql.read_db(conn=supabase_db, table='scoring_cards', filter=[['event_id', self.event_df['id'].tolist()[0]]], legacy=False)
+
                 # Create scoring card groups
                 self.add_groups(scoring_card_id=scoring_card_id, participants=st_participants, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
                 
@@ -476,13 +733,15 @@ class EventScoringCards():
     def edit(self, scoring_card_df, all_groups_df=None, all_participants_df=None):
         scoring_card_id = scoring_card_df['id'].tolist()[0]
         #print(f"scoring_card ID = {scoring_card_id}")
-        scoring_card_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
-        scoring_card_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+        #scoring_card_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+        scoring_card_groups_df = data.scoring_cards_groups_df.query(f"scoring_card_id == {scoring_card_id}")
+        #scoring_card_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+        scoring_card_participants_df = data.scoring_cards_participants_df.query(f"scoring_card_id == {scoring_card_id}")
         scorer_id = scoring_card_df['event_participant_id'].tolist()[0]
         course_id = scoring_card_df['course_id'].tolist()[0]
         
-        courses_df = sql.courses().read()
-
+        #courses_df = sql.courses().read()
+        courses_df = data.courses_df
         #print(f"scoring_card groups = {scoring_card_groups_df['name'].tolist()}")
         #print(f"scoring_card participants = {scoring_card_participants_df['name'].tolist()}")
         
@@ -500,7 +759,8 @@ class EventScoringCards():
                 scorer_id = all_participants_df[all_participants_df['name']==st_scorer]['id'].tolist()[0]
                 fields = ["name", "description", "event_participant_id", "course_id", "date"]
                 values = [st_name, st_description, scorer_id, course_id, f"'{st.session_state.event_sc_date}'"]
-                self.scoring_cards_sql.update(id=scoring_card_id, fields=fields, values=values)
+                #self.scoring_cards_sql.update(id=scoring_card_id, fields=fields, values=values)
+                sql.write_db(conn=supabase_db, table='scoring_cards', entry_id=scoring_card_id, fields=fields, values=values)
                            
                 # Update groups to be added
                 self.add_groups(scoring_card_id=scoring_card_id, participants=st_participants, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
@@ -509,12 +769,14 @@ class EventScoringCards():
                 self.add_participants(scoring_card_id=scoring_card_id, participants=st_participants, all_participants_df=all_participants_df)
                         
                 # Identify and update participants to be removed
-                scoring_card_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+                #scoring_card_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+                scoring_card_participants_df = data.scoring_cards_participants_df.query(f"scoring_card_id == {scoring_card_id}")
                 if not scoring_card_participants_df.empty:
                     for participant in scoring_card_participants_df['name'].tolist():
                         if participant not in st_participants:
                             participant_id = scoring_card_participants_df[scoring_card_participants_df['name']==participant]['id'].tolist()[0]
-                            self.participants_sql.delete(id=participant_id)
+                            #self.participants_sql.delete(id=participant_id)
+                            sql.remove_db(conn=supabase_db, table='scoring_card_participants', filter=[['id',participant_id]])
                             continue
                 
                 # Identify and update groups to be removed
@@ -523,11 +785,13 @@ class EventScoringCards():
                 if not scoring_card_groups_df.empty:
                     for group_id in scoring_card_groups_df['id'].tolist():
                         if scoring_card_participants_df.empty:
-                            self.groups_sql.delete(id=group_id)
+                            #self.groups_sql.delete(id=group_id)
+                            sql.remove_db(conn=supabase_db, table='scoring_card_groups',filter=[['id',group_id]])
                             continue
                         
                         if group_id not in scoring_card_participants_df['scoring_card_group_id'].tolist():
-                            self.groups_sql.delete(id=group_id)
+                            #self.groups_sql.delete(id=group_id)
+                            sql.remove_db(conn=supabase_db, table='scoring_card_groups', filter=[['id',group_id]])
                             continue               
             
             st.rerun()
@@ -537,14 +801,15 @@ class EventScoringCards():
     def remove(self, scoring_card_df=None):
         st.text('Are you sure you want to delete the score card?\nThis wall delete all scored holes and matches')
         if st.button('Yes'):
-            self.scoring_cards_sql.delete(id=scoring_card_df['id'].tolist()[0])
+            #self.scoring_cards_sql.delete(id=scoring_card_df['id'].tolist()[0])
+            sql.remove_db(conn=supabase_db, table='scoring_cards', filter=[['id',scoring_card_df['id'].tolist()[0]]])
             st.rerun()
         if st.button('No'):
             st.rerun()
     
     # Move item up or down
     def move(self, sel, up=None, down=None):
-        df_sql = sql.scoring_cards()
+        #df_sql = sql.scoring_cards()
         df = self.scoring_cards_df
         this_id = sel['id'].tolist()[0]
         this_sequence = sel['sequence'].tolist()[0]
@@ -567,12 +832,14 @@ class EventScoringCards():
         # Update this event
         fields = ['sequence']
         values = [other_sequence]
-        df_sql.update(id=this_id, fields=fields, values=values)
+        #df_sql.update(id=this_id, fields=fields, values=values)
+        sql.write_db(conn=supabase_db, table='scoring_cards', entry_id=this_id, fields=fields, values=values)
         
         # Update other event
         fields = ['sequence']
         values = [this_sequence]
-        df_sql.update(id=other_id, fields=fields, values=values)
+        #df_sql.update(id=other_id, fields=fields, values=values)
+        sql.write_db(conn=supabase_db, table='scoring_cards', entry_id=other_id, fields=fields, values=values)
         
         st.rerun()
           
@@ -583,13 +850,16 @@ class EventScoringCards():
             event_group_name = all_groups_df.query(f"id == {event_group_id}")['name'].tolist()[0]
             event_group_description = all_groups_df.query(f"id == {event_group_id}")['description'].tolist()[0]
             
-            scoring_card_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+            #scoring_card_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+            scoring_card_groups_df = sql.read_db(conn=supabase_db, table='scoring_card_groups', filter=[['scoring_card_id', scoring_card_id]], legacy=False)
             
             if scoring_card_groups_df.empty:
                 #print(f"No groups for scoring card, creating group for {participant_name}")
                 fields = ["name", "description", "scoring_card_id", "event_group_id"]
                 values = [event_group_name, event_group_description, scoring_card_id, event_group_id]
-                self.groups_sql.add(fields=fields, values=values)  
+                #self.groups_sql.add(fields=fields, values=values)
+                #sql.add_db(conn=supabase_db, table='scoring_card_groups', fields=fields, values=values)
+                sql.write_db(conn=supabase_db, table='scoring_card_groups', fields=fields, values=values)
                 continue
                         
             if not scoring_card_groups_df.empty:
@@ -597,26 +867,31 @@ class EventScoringCards():
                     #print(f"Group for {participant_name} does not exist, creating group")
                     fields = ["name", "description", "scoring_card_id", "event_group_id"]
                     values = [event_group_name, event_group_description, scoring_card_id, event_group_id]
-                    self.groups_sql.add(fields=fields, values=values)  
+                    #self.groups_sql.add(fields=fields, values=values)
+                    #sql.add_db(conn=supabase_db, table='scoring_card_groups', fields=fields, values=values)
+                    sql.write_db(conn=supabase_db, table='scoring_card_groups', fields=fields, values=values)
                     continue
     
     def add_participants(self, scoring_card_id=None, participants=None, all_participants_df=None):
         # Create scoring card participants
         for participant_name in participants:
             event_group_id = all_participants_df.query(f"name == '{participant_name}'")['event_group_id'].tolist()[0]
-            scoring_card_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+            #scoring_card_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+            scoring_card_groups_df = sql.read_db(conn=supabase_db, table='scoring_card_groups', filter=[['scoring_card_id', scoring_card_id]], legacy=False)
             scoring_card_group_id = scoring_card_groups_df.query(f"scoring_card_id == {scoring_card_id} & event_group_id == {event_group_id}")['id'].tolist()[0]
             event_participant_id = all_participants_df.query(f"name == '{participant_name}'")['id'].tolist()[0]
             event_participant_name = all_participants_df.query(f"name == '{participant_name}'")['name'].tolist()[0]
             event_participant_description = all_participants_df.query(f"name == '{participant_name}'")['description'].tolist()[0]
             
-            scoring_card_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
-            
+            #scoring_card_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.scoring_card_id={scoring_card_id}"))
+            scoring_card_participants_df = sql.read_db(conn=supabase_db, table='scoring_card_participants', filter=[['scoring_card_id', scoring_card_id]], legacy=False)
+
             if scoring_card_participants_df.empty:
                 #print(f"No participants for scoring card, creating participant for {participant_name}")
                 fields = ["name", "description", "scoring_card_id", "scoring_card_group_id", "event_participant_id"]
                 values = [event_participant_name, event_participant_description, scoring_card_id, scoring_card_group_id, event_participant_id]
-                self.participants_sql.add(fields=fields, values=values) 
+                #self.participants_sql.add(fields=fields, values=values)
+                sql.write_db(conn=supabase_db, table='scoring_card_participants', fields=fields, values=values)
                 continue
                 
             if not scoring_card_participants_df.empty:
@@ -624,7 +899,8 @@ class EventScoringCards():
                     #print(f"Participant for {participant_name} does not exist, creating participant")
                     fields = ["name", "description", "scoring_card_id", "scoring_card_group_id", "event_participant_id"]
                     values = [event_participant_name, event_participant_description, scoring_card_id, scoring_card_group_id, event_participant_id]
-                    self.participants_sql.add(fields=fields, values=values) 
+                    #self.participants_sql.add(fields=fields, values=values)
+                    sql.write_db(conn=supabase_db, table='scoring_card_participants', fields=fields, values=values)
                     continue
 
 
@@ -641,87 +917,99 @@ class EventMatches():
 
     def __init__(self, event_df=None):
         self.event_df = event_df
-        self.matches_sql = sql.matches()
-        self.matches_df = pd.DataFrame(self.matches_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        #self.matches_sql = sql.matches()
+        #self.matches_df = pd.DataFrame(self.matches_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        self.matches_df = data.matches_df.query(f"event_id == {self.event_df['id'].tolist()[0]}")
         if not self.matches_df.empty:
             self.matches_df = self.matches_df.sort_values(by=['sequence','start_hole', 'name'])
             matches_ids_str = ','.join(map(str, self.matches_df['id'].tolist()))
         else:
             matches_ids_str = ''
             
-        self.groups_sql = sql.match_groups()
-        self.groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id IN ({matches_ids_str})"))
+        #self.groups_sql = sql.match_groups()
+        #self.groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id IN ({matches_ids_str})"))
+        self.groups_df = data.matches_groups_df.query(f"match_id in [{matches_ids_str}]")
         if not self.groups_df.empty: self.groups_df = self.groups_df.sort_values(by=['name'])
-        self.participants_sql = sql.match_participants()
+        #self.participants_sql = sql.match_participants()
         
-        all_groups_sql = sql.event_groups()
-        all_groups_df = pd.DataFrame(all_groups_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        #all_groups_sql = sql.event_groups()
+        #all_groups_df = pd.DataFrame(all_groups_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        all_groups_df = data.event_groups_df
         if not all_groups_df.empty: all_groups_df = all_groups_df.sort_values(by='name')
         else: return
-        
-        all_participants_sql = sql.event_participants()
-        all_participants_df = pd.DataFrame(all_participants_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+
+        self.participants_df = data.matches_participants_df.query(f"match_id in [{matches_ids_str}]")
+        #all_participants_sql = sql.event_participants()
+        #all_participants_df = pd.DataFrame(all_participants_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        all_participants_df = data.event_participants_df
         if not all_participants_df.empty: all_participants_df = all_participants_df.sort_values(by='name')
         else: return
-        
-        exp_matches = st.expander("Matches", expanded=False)
-        with exp_matches:
-            col = st.container(horizontal=True, width='stretch')
-            with col:
-                if st.button(label='', icon=':material/add_2:', key="add_match", disabled=not st.session_state.global_admin): self.add(event_id=self.event_df['id'].tolist()[0],
-                                                               all_groups_df=all_groups_df,
-                                                               all_participants_df=all_participants_df)
-                #if st.button(label="Refresh", key='event_matches_refresh_button'): st.rerun()
+
+        @st.fragment
+        def fragment_matches():
+            exp_matches = st.expander("Matches", expanded=False)
+            with exp_matches:
+                col = st.container(horizontal=True, width='stretch')
+                with col:
+                    if st.button(label='', icon=':material/add_2:', key="add_match", disabled=not st.session_state.global_admin): self.add(event_id=self.event_df['id'].tolist()[0],
+                                                                all_groups_df=all_groups_df,
+                                                                all_participants_df=all_participants_df)
+                    #if st.button(label="Refresh", key='event_matches_refresh_button'): st.rerun()
+                        
+                matches_df = self.matches_df
+                if not matches_df.empty:
+                    participants_info = []
+                    for match_id in matches_df['id'].tolist():
+                        #if self.groups_sql.read(filter=f"WHERE table.match_id={match_id}") is not None:
+                        if not self.groups_df.query(f"match_id == {match_id}").empty:
+                            #groups_df = self.groups_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by='name')
+                            groups_df = self.groups_df.query(f"match_id == {match_id}").sort_values(by='name')
+                            info = str()
+                            for group_name, group_id in zip(groups_df['name'].tolist(), groups_df['id'].tolist()):                    
+                                #participants_df = self.participants_sql.read(filter=f"WHERE table.match_id={match_id} AND table.match_group_id={group_id}").sort_values(by='name')
+                                participants_df = self.participants_df.query(f"match_id == {match_id} and match_group_id == {group_id}").sort_values(by='name')
+                                info+=f"{group_name}[{", ".join(participants_df['name'].tolist())}] "
+                            participants_info.append(info)
+                        else: participants_info.append(None)
+                    matches_df['participants'] = participants_info
+                
+                    # Show overview
+                    #print(self.groups_df)
+                    matches_overview_df = pd.DataFrame(columns=['group_id', 'Group', 'Points'])
+                    if not self.groups_df.empty:
+                        group_ids = list(dict.fromkeys(self.groups_df['event_group_id'].tolist()))
+                        group_names = list(dict.fromkeys(self.groups_df['event_groups_name'].tolist()))
+                        group_points = list()
+                        for group_id in group_ids:
+                            group_points.append(self.groups_df.query(f"event_group_id=={group_id}")['value'].sum())
+                    else:
+                        group_ids = [None]
+                        group_names = [None]
+                        group_points = [None]
+                    matches_overview_df['group_id'] = group_ids
+                    matches_overview_df['Group'] = group_names
+                    matches_overview_df['Points'] = group_points
                     
-            matches_df = self.matches_df
-            if not matches_df.empty:
-                participants_info = []
-                for match_id in matches_df['id'].tolist():
-                    if self.groups_sql.read(filter=f"WHERE table.match_id={match_id}") is not None:
-                        groups_df = self.groups_sql.read(filter=f"WHERE table.match_id={match_id}").sort_values(by='name')
-                        info = str()
-                        for group_name, group_id in zip(groups_df['name'].tolist(), groups_df['id'].tolist()):                    
-                            participants_df = self.participants_sql.read(filter=f"WHERE table.match_id={match_id} AND table.match_group_id={group_id}").sort_values(by='name')
-                            info+=f"{group_name}[{", ".join(participants_df['name'].tolist())}] "
-                        participants_info.append(info)
-                    else: participants_info.append(None)
-                matches_df['participants'] = participants_info
-            
-                # Show overview
-                #print(self.groups_df)
-                matches_overview_df = pd.DataFrame(columns=['group_id', 'Group', 'Points'])
-                if not self.groups_df.empty:
-                    group_ids = list(dict.fromkeys(self.groups_df['event_group_id'].tolist()))
-                    group_names = list(dict.fromkeys(self.groups_df['event_groups_name'].tolist()))
-                    group_points = list()
-                    for group_id in group_ids:
-                        group_points.append(self.groups_df.query(f"event_group_id=={group_id}")['value'].sum())
-                else:
-                    group_ids = [None]
-                    group_names = [None]
-                    group_points = [None]
-                matches_overview_df['group_id'] = group_ids
-                matches_overview_df['Group'] = group_names
-                matches_overview_df['Points'] = group_points
-                
-                column_config = {key: None for key in matches_overview_df.columns.to_list()}
-                column_config['Group'] = st.column_config.TextColumn(label='Name', disabled=True)
-                column_config['Points'] = st.column_config.NumberColumn(label='Points', disabled=True)
-                st.data_editor(data=matches_overview_df, column_config=column_config, hide_index=True)
-                
-                # Show matches   
-                #print(self.matches_df)
-                for match_id in self.matches_df['id'].tolist():
-                    #print(match_id)
-                    match_df = self.matches_df.query(f"id == {match_id}")
-                    #print(match_df)
-                    match = st_MatchInfo(match_df=match_df)
-                    match.st_obj()
+                    column_config = {key: None for key in matches_overview_df.columns.to_list()}
+                    column_config['Group'] = st.column_config.TextColumn(label='Name', disabled=True)
+                    column_config['Points'] = st.column_config.NumberColumn(label='Points', disabled=True)
+                    st.data_editor(data=matches_overview_df, column_config=column_config, hide_index=True)
+                    
+                    # Show matches   
+                    #print(self.matches_df)
+                    for match_id in self.matches_df['id'].tolist():
+                        #print(match_id)
+                        match_df = self.matches_df.query(f"id == {match_id}")
+                        #print(match_df)
+                        match = st_MatchInfo(match_df=match_df)
+                        match.st_obj()
+        fragment_matches()
     
     @st.dialog("Add match")
     def add(self, event_id=None, all_groups_df=None, all_participants_df=None):
-        formats_sql = sql.formats()
-        formats_df = formats_sql.read()
+        #formats_sql = sql.formats()
+        #formats_df = formats_sql.read()
+        formats_df = data.formats_df
         
         st_name = st.text_input("Name")
         st_description = st.text_input("Description")
@@ -743,8 +1031,10 @@ class EventMatches():
             fields = ["name", "description", "value", "holes", "start_hole", "event_id", "format_id"]
             values = [st_name, st_description, float(st_value), int(st_holes), int(st_start_hole), event_id, format_id]
             # Create match
-            match_id = self.matches_sql.add(fields=fields, values=values)
-            self.matches_df = pd.DataFrame(self.matches_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+            #match_id = self.matches_sql.add(fields=fields, values=values)
+            match_id = sql.write_db(conn=supabase_db, table='matchs', fields=fields, values=values)
+            #self.matches_df = pd.DataFrame(self.matches_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+            self.matches_df = sql.read_db(conn=supabase_db, table='matchs', filter=[['event_id', self.event_df['id'].tolist()[0]]], legacy=False)
             
             if len(st_participants) > 0:
                 # Create match groups
@@ -758,13 +1048,16 @@ class EventMatches():
     @st.dialog("Edit match")
     def edit(self, match_df, all_groups_df=None, all_participants_df=None):
         
-        formats_sql = sql.formats()
-        formats_df = formats_sql.read()
+        #formats_sql = sql.formats()
+        #formats_df = formats_sql.read()
+        formats_df = data.formats_df
         
         match_id = match_df['id'].tolist()[0]
         #print(f"Match ID = {match_id}")
-        match_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id={match_id}"))
-        match_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.match_id={match_id}"))
+        #match_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id={match_id}"))
+        match_groups_df = data.match_groups_df.query(f"match_id == {match_id}")
+        #match_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.match_id={match_id}"))
+        match_participants_df = data.match_participants_df.query(f"match_id == {match_id}")
         #print(f"Match groups = {match_groups_df['name'].tolist()}")
         #print(f"Match participants = {match_participants_df['name'].tolist()}")
         
@@ -783,7 +1076,8 @@ class EventMatches():
             format_id = formats_df.query(f"name == '{st_format}'")['id'].tolist()[0]
             fields = ["name", "description", "format_id", "value"]
             values = [st_name, st_description, format_id, float(st_value)]
-            self.matches_sql.update(id=match_id, fields=fields, values=values)
+            #self.matches_sql.update(id=match_id, fields=fields, values=values)
+            sql.write_db(conn=supabase_db, table='matchs', entry_id=match_id, fields=fields, values=values)
             
             # Update groups to be added
             self.add_groups(match_id=match_id, participants=st_participants, all_groups_df=all_groups_df, all_participants_df=all_participants_df)
@@ -792,25 +1086,31 @@ class EventMatches():
             self.add_participants(match_id=match_id, participants=st_participants, all_participants_df=all_participants_df)
                     
             # Identify and update participants to be removed
-            match_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            #match_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            match_participants_df = sql.read_db(conn=supabase_db, table='match_participants', filter=[['match_id', match_id]], legacy=False)
             if not match_participants_df.empty:
                 for participant in match_participants_df['name'].tolist():
                     if participant not in st_participants:
                         participant_id = match_participants_df[match_participants_df['name']==participant]['id'].tolist()[0]
-                        self.participants_sql.delete(id=participant_id)
+                        #self.participants_sql.delete(id=participant_id)
+                        sql.delete_db(conn=supabase_db, table='match_participants', entry_id=participant_id)
                         continue
             
             # Identify and update groups to be removed
-            match_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id={match_id}"))
-            match_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            #match_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            match_groups_df = sql.read_db(conn=supabase_db, table='match_groups', filter=[['match_id', match_id]], legacy=False)
+            #match_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            match_participants_df = sql.read_db(conn=supabase_db, table='match_participants', filter=[['match_id', match_id]], legacy=False)
             if not match_groups_df.empty:
                 for group_id in match_groups_df['id'].tolist():
                     if match_participants_df.empty:
-                        self.groups_sql.delete(id=group_id)
+                        #self.groups_sql.delete(id=group_id)
+                        sql.delete_db(conn=supabase_db, table='match_groups', entry_id=group_id)
                         continue
                     
                     if group_id not in match_participants_df['match_group_id'].tolist():
-                        self.groups_sql.delete(id=group_id)
+                        #self.groups_sql.delete(id=group_id)
+                        sql.delete_db(conn=supabase_db, table='match_groups', entry_id=group_id)
                         continue               
             
             st.rerun()
@@ -822,13 +1122,15 @@ class EventMatches():
             event_group_name = all_groups_df.query(f"id == {event_group_id}")['name'].tolist()[0]
             event_group_description = all_groups_df.query(f"id == {event_group_id}")['description'].tolist()[0]
             
-            match_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            #match_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            match_groups_df = sql.read_db(conn=supabase_db, table='match_groups', filter=[['match_id', match_id]], legacy=False)
             
             if match_groups_df.empty:
                 #print(f"No groups for match, creating group for {participant_name}")
                 fields = ["name", "description", "match_id", "event_group_id"]
                 values = [event_group_name, event_group_description, match_id, event_group_id]
-                self.groups_sql.add(fields=fields, values=values)  
+                #self.groups_sql.add(fields=fields, values=values)  
+                sql.write_db(conn=supabase_db, table='match_groups', fields=fields, values=values)
                 continue
                         
             if not match_groups_df.empty:
@@ -836,26 +1138,30 @@ class EventMatches():
                     #print(f"Group for {participant_name} does not exist, creating group")
                     fields = ["name", "description", "match_id", "event_group_id"]
                     values = [event_group_name, event_group_description, match_id, event_group_id]
-                    self.groups_sql.add(fields=fields, values=values)  
+                    #self.groups_sql.add(fields=fields, values=values)  
+                    sql.write_db(conn=supabase_db, table='match_groups', fields=fields, values=values)
                     continue
             
     def add_participants(self, match_id=None, participants=None, all_participants_df=None):
         # Create match participants
         for participant_name in participants:
             event_group_id = all_participants_df.query(f"name == '{participant_name}'")['event_group_id'].tolist()[0]
-            match_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            #match_groups_df = pd.DataFrame(self.groups_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            match_groups_df = sql.read_db(conn=supabase_db, table='match_groups', filter=[['match_id', match_id]], legacy=False)
             match_group_id = match_groups_df.query(f"match_id == {match_id} & event_group_id == {event_group_id}")['id'].tolist()[0]
             event_participant_id = all_participants_df.query(f"name == '{participant_name}'")['id'].tolist()[0]
             event_participant_name = all_participants_df.query(f"name == '{participant_name}'")['name'].tolist()[0]
             event_participant_description = all_participants_df.query(f"name == '{participant_name}'")['description'].tolist()[0]
             
-            match_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            #match_participants_df = pd.DataFrame(self.participants_sql.read(filter=f"WHERE table.match_id={match_id}"))
+            match_participants_df = sql.read_db(conn=supabase_db, table='match_participants', filter=[['match_id', match_id]], legacy=False)
             
             if match_participants_df.empty:
                 #print(f"No participants for match, creating participant for {participant_name}")
                 fields = ["name", "description", "match_id", "match_group_id", "event_participant_id"]
                 values = [event_participant_name, event_participant_description, match_id, match_group_id, event_participant_id]
-                self.participants_sql.add(fields=fields, values=values) 
+                #self.participants_sql.add(fields=fields, values=values) 
+                sql.write_db(conn=supabase_db, table='match_participants', fields=fields, values=values)
                 continue
                 
             if not match_participants_df.empty:
@@ -863,11 +1169,13 @@ class EventMatches():
                     #print(f"Participant for {participant_name} does not exist, creating participant")
                     fields = ["name", "description", "match_id", "match_group_id", "event_participant_id"]
                     values = [event_participant_name, event_participant_description, match_id, match_group_id, event_participant_id]
-                    self.participants_sql.add(fields=fields, values=values) 
+                    #self.participants_sql.add(fields=fields, values=values) 
+                    sql.write_db(conn=supabase_db, table='match_participants', fields=fields, values=values)
                     continue
     
     def remove(self, match_df=None):
-        self.matches_sql.delete(id=match_df['id'].tolist()[0])
+        #self.matches_sql.delete(id=match_df['id'].tolist()[0])
+        sql.delete_db(conn=supabase_db, table='matchs', entry_id=match_df['id'].tolist()[0])
         st.rerun()
       
         
@@ -882,110 +1190,124 @@ class EventGroupParticipants():
     
     def __init__(self, event_df=None):
         self.event_df = event_df
-        self.groups_sql = sql.event_groups()
-        self.groups_df = pd.DataFrame(self.groups_sql.read())
+        #self.groups_sql = sql.event_groups()
+        #self.groups_df = pd.DataFrame(self.groups_sql.read())
+        self.groups_df = data.event_groups_df
         if not self.groups_df.empty: self.groups_df = self.groups_df.sort_values(by='name')
             
-        self.participants_sql = sql.event_participants()
-        self.participants_df = pd.DataFrame(self.participants_sql.read())
+        #self.participants_sql = sql.event_participants()
+        #self.participants_df = pd.DataFrame(self.participants_sql.read())
+        self.participants_df = data.event_participants_df
         if not self.participants_df.empty: self.participants_df = self.participants_df.sort_values(by=['event_groups_name','name'])
         
-        pos_assigned_groups_sql = sql.event_groups()
-        pos_assigned_groups_df = pd.DataFrame(pos_assigned_groups_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
-        pos_all_groups_sql = sql.competition_groups()
+        #pos_assigned_groups_sql = sql.event_groups()
+        #pos_assigned_groups_df = pd.DataFrame(pos_assigned_groups_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        pos_assigned_groups_df = data.event_groups_df
+        #pos_all_groups_sql = sql.competition_groups()
         if not pos_assigned_groups_df.empty:
-            pos_all_groups_df = pd.DataFrame(pos_all_groups_sql.read(filter=f"WHERE table.competition_id={self.event_df['competition_id'].tolist()[0]}"))
+            #pos_all_groups_df = pd.DataFrame(pos_all_groups_sql.read(filter=f"WHERE table.competition_id={self.event_df['competition_id'].tolist()[0]}"))
+            pos_all_groups_df = data.competition_groups_df
             if not pos_all_groups_df.empty: pos_all_groups_df = pos_all_groups_df.sort_values(by='name')
         else:
-            pos_all_groups_df = pd.DataFrame(pos_all_groups_sql.read(filter=f"WHERE table.competition_id={self.event_df['competition_id'].tolist()[0]}"))
+            #pos_all_groups_df = pd.DataFrame(pos_all_groups_sql.read(filter=f"WHERE table.competition_id={self.event_df['competition_id'].tolist()[0]}"))
+            pos_all_groups_df = data.competition_groups_df
             if not pos_all_groups_df.empty: pos_all_groups_df = pos_all_groups_df.sort_values(by='name')
             
-        pos_assigned_participants_sql = sql.event_participants()
-        pos_assigned_participants_df = pd.DataFrame(pos_assigned_participants_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        #pos_assigned_participants_sql = sql.event_participants()
+        #pos_assigned_participants_df = pd.DataFrame(pos_assigned_participants_sql.read(filter=f"WHERE table.event_id={self.event_df['id'].tolist()[0]}"))
+        pos_assigned_participants_df = data.event_participants_df
         if not pos_assigned_participants_df.empty: pos_assigned_participants_df = pos_assigned_participants_df.sort_values(by=['event_groups_name','name'])
         
-        pos_unassigned_participants_sql = sql.competition_participants()
+        #pos_unassigned_participants_sql = sql.competition_participants()
         if not pos_assigned_participants_df.empty:
-            pos_unassigned_participants_df = pd.DataFrame(pos_unassigned_participants_sql.read(filter=f"WHERE table.competition_id={self.event_df['competition_id'].tolist()[0]}")).query(f'id not in {pos_assigned_participants_df['competition_participant_id'].tolist()}')
+            #pos_unassigned_participants_df = pd.DataFrame(pos_unassigned_participants_sql.read(filter=f"WHERE table.competition_id={self.event_df['competition_id'].tolist()[0]}")).query(f'id not in {pos_assigned_participants_df['competition_participant_id'].tolist()}')
+            pos_unassigned_participants_df = data.other_participants_df
             if not pos_unassigned_participants_df.empty: pos_unassigned_participants_df = pos_unassigned_participants_df.sort_values(by='name')
         else:
-            pos_unassigned_participants_df = pd.DataFrame(pos_unassigned_participants_sql.read(filter=f"WHERE table.competition_id={self.event_df['competition_id'].tolist()[0]}"))
+            #pos_unassigned_participants_df = pd.DataFrame(pos_unassigned_participants_sql.read(filter=f"WHERE table.competition_id={self.event_df['competition_id'].tolist()[0]}"))
+            pos_unassigned_participants_df = data.other_participants_df
             if not pos_unassigned_participants_df.empty: pos_unassigned_participants_df = pos_unassigned_participants_df.sort_values(by='name')
-                
-        exp_groups_participants = st.expander("Groups & Participants", expanded=False)
-        con_assigned = exp_groups_participants.container(horizontal=True, width='stretch')
-        with con_assigned:                                      
-            exp_assigned_participants = st.expander("Participants", expanded=True)
-            with exp_assigned_participants:
-                column_config = {key: None for key in pos_assigned_participants_df.columns.to_list()}
-                column_config['name'] = 'Name'
-                column_config['event_groups_name'] = 'Group'
-                column_config['hc_index'] = 'HC Index'
 
-                if not pos_assigned_participants_df.empty:
-                    assigned_participants = st.dataframe(
-                        pos_assigned_participants_df,
+        @st.fragment
+        def fragment_groups_participants():        
+            exp_groups_participants = st.expander("Groups & Participants", expanded=False)
+            con_assigned = exp_groups_participants.container(horizontal=True, width='stretch')
+            with con_assigned:                                      
+                exp_assigned_participants = st.expander("Participants", expanded=True)
+                with exp_assigned_participants:
+                    column_config = {key: None for key in pos_assigned_participants_df.columns.to_list()}
+                    column_config['name'] = 'Name'
+                    column_config['event_groups_name'] = 'Group'
+                    column_config['hc_index'] = 'HC Index'
+
+                    if not pos_assigned_participants_df.empty:
+                        assigned_participants = st.dataframe(
+                            pos_assigned_participants_df,
+                            on_select='rerun',
+                            selection_mode='multi-row',
+                            hide_index=True,
+                            column_config=column_config
+                        )
+            
+            exp_unassigned = exp_groups_participants.expander("Available", expanded=False)
+            con_unassigned = exp_unassigned.container(horizontal=True, width='stretch')  
+            with con_unassigned:
+                column_config = {key: None for key in pos_unassigned_participants_df.columns.to_list()}
+                column_config['name'] = 'Participant'
+                column_config['competition_groups_name'] = 'Group'
+                column_config['hc_index'] = 'HC Index'
+                if not pos_unassigned_participants_df.empty:
+                    unassigned_participants = st.dataframe(
+                        pos_unassigned_participants_df,
                         on_select='rerun',
                         selection_mode='multi-row',
                         hide_index=True,
                         column_config=column_config
                     )
-        
-        exp_unassigned = exp_groups_participants.expander("Available", expanded=False)
-        con_unassigned = exp_unassigned.container(horizontal=True, width='stretch')  
-        with con_unassigned:
-            column_config = {key: None for key in pos_unassigned_participants_df.columns.to_list()}
-            column_config['name'] = 'Participant'
-            column_config['competition_groups_name'] = 'Group'
-            column_config['hc_index'] = 'HC Index'
-            if not pos_unassigned_participants_df.empty:
-                unassigned_participants = st.dataframe(
-                    pos_unassigned_participants_df,
-                    on_select='rerun',
-                    selection_mode='multi-row',
-                    hide_index=True,
-                    column_config=column_config
-                )
-        
-        # Remove button
-        if not pos_assigned_participants_df.empty and st.session_state.global_admin:    
-            if len(assigned_participants.selection['rows']):
-                participants_ids = pos_assigned_participants_df.iloc[assigned_participants.selection['rows']]['id'].tolist()
-                participants_sels = pos_assigned_participants_df.query(f'id in {participants_ids}')
-                if exp_assigned_participants.button("Remove", key="remove_participants", width='stretch'):
-                    self.remove_participants(selection=participants_sels)
-                    pass
+            
+            # Remove button
+            if not pos_assigned_participants_df.empty and st.session_state.global_admin:    
+                if len(assigned_participants.selection['rows']):
+                    participants_ids = pos_assigned_participants_df.iloc[assigned_participants.selection['rows']]['id'].tolist()
+                    participants_sels = pos_assigned_participants_df.query(f'id in {participants_ids}')
+                    if exp_assigned_participants.button("Remove", key="remove_participants", width='stretch'):
+                        self.remove_participants(selection=participants_sels)
+                        pass
+                else:
+                    exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
             else:
                 exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
-        else:
-            exp_assigned_participants.button("Remove", key="remove_participants", disabled=True, width='stretch')
-        
-        # Add button        
-        if not pos_unassigned_participants_df.empty and st.session_state.global_admin:
-            if len(unassigned_participants.selection['rows']):# and len(all_groups.selection['rows']):
-                participants_ids = pos_unassigned_participants_df.iloc[unassigned_participants.selection['rows']]['id'].tolist()
-                participants_sels = pos_unassigned_participants_df.query(f'id in {participants_ids}')
-                groups_ids = pos_unassigned_participants_df.iloc[unassigned_participants.selection['rows']]['competition_group_id'].tolist()
+            
+            # Add button        
+            if not pos_unassigned_participants_df.empty and st.session_state.global_admin:
+                if len(unassigned_participants.selection['rows']):# and len(all_groups.selection['rows']):
+                    participants_ids = pos_unassigned_participants_df.iloc[unassigned_participants.selection['rows']]['id'].tolist()
+                    participants_sels = pos_unassigned_participants_df.query(f'id in {participants_ids}')
+                    groups_ids = pos_unassigned_participants_df.iloc[unassigned_participants.selection['rows']]['competition_group_id'].tolist()
 
-                if exp_unassigned.button("Add", key="add_participants", width='stretch'):                    
-                    self.add_participants(selection=participants_sels, groups_df=pos_assigned_groups_df)   
+                    if exp_unassigned.button("Add", key="add_participants", width='stretch'):                    
+                        self.add_participants(selection=participants_sels, groups_df=pos_assigned_groups_df)   
+                else:
+                    exp_unassigned.button("Add", key="add_participants", disabled=True, width='stretch')
             else:
                 exp_unassigned.button("Add", key="add_participants", disabled=True, width='stretch')
-        else:
-            exp_unassigned.button("Add", key="add_participants", disabled=True, width='stretch')
-                               
+        fragment_groups_participants()
+
     def add_groups(self, selection):
         fields = selection.columns.tolist()
         fields.pop(fields.index('id'))# = 'competition_group_id'
-        fields[fields.index('name')] = sql.competition_groups().read(filter=f"WHERE table.id={fields[fields.index('competition_group_id')]}")['name'].tolist()[0]
+        #fields[fields.index('name')] = sql.competition_groups().read(filter=f"WHERE table.id={fields[fields.index('competition_group_id')]}")['name'].tolist()[0]
+        fields[fields.index('name')] = sql.read_db(conn=supabase_db, table='competition_groups', filter=[['id', fields[fields.index('competition_group_id')]]], legacy=False)['name'].tolist()[0]
         fields.append('event_id')       
         
         for entry in selection.to_numpy().tolist():
             entry.append(self.event_df['id'].tolist()[0])
-            self.groups_sql.add(fields=fields, values=entry)
+            #self.groups_sql.add(fields=fields, values=entry)
+            sql.write_db(conn=supabase_db, table='event_groups', fields=fields, values=entry)
     
     def remove_groups(self, id):
-        self.groups_sql.delete(id=id)
+        #self.groups_sql.delete(id=id)
+        sql.delete_db(conn=supabase_db, table='event_groups', entry_id=id)
 
     def add_participants(self, selection, groups_df):
         fields = selection.columns.tolist()
@@ -999,20 +1321,24 @@ class EventGroupParticipants():
             event_id = self.event_df['id'].tolist()[0]
             entry.append(event_id)
             competition_group_id = entry[group_id_index]
-            entry[name_index] = sql.competition_groups().read(filter=f"WHERE table.id={competition_group_id}")['name'].tolist()[0]
-            
+            entry[name_index] = sql.read_db(conn=supabase_db, table='competition_groups', filter=[['id', competition_group_id]], legacy=False)['name'].tolist()[0]
+
             if not self.groups_df.empty:
                 if entry[group_id_index] not in self.groups_df.query(f'event_id == {event_id}')['competition_group_id'].tolist():
                     #print(f'Not in current groups - create group')
-                    self.groups_sql.add(fields=fields, values=entry)
-                    self.groups_df = pd.DataFrame(self.groups_sql.read())
+                    #self.groups_sql.add(fields=fields, values=entry)
+                    sql.write_db(conn=supabase_db, table='event_groups', fields=fields, values=entry)
+                    #self.groups_df = pd.DataFrame(self.groups_sql.read())
+                    self.groups_df = sql.read_db(conn=supabase_db, table='event_groups', filter=[['event_id', event_id]], legacy=False)
                 else:
                     #print('Group already exists')
                     self.groups_df.query(f'event_id == {event_id} & competition_group_id == {entry[group_id_index]}')['id'].tolist()[0]
             else:
                 #print('No groups exist - create group')
-                self.groups_sql.add(fields=fields, values=entry)
-                self.groups_df = pd.DataFrame(self.groups_sql.read())
+                #self.groups_sql.add(fields=fields, values=entry)
+                sql.write_db(conn=supabase_db, table='event_groups', fields=fields, values=entry)
+                #self.groups_df = pd.DataFrame(self.groups_sql.read())
+                self.groups_df = sql.read_db(conn=supabase_db, table='event_groups', filter=[['event_id', event_id]], legacy=False)
                 
         # Create participants   
         fields = selection.columns.tolist()
@@ -1029,7 +1355,8 @@ class EventGroupParticipants():
             entry.append(event_group_id)
             
             #print(f'entry = {entry}')
-            self.participants_sql.add(fields=fields, values=entry)
+            #self.participants_sql.add(fields=fields, values=entry)
+            sql.write_db(conn=supabase_db, table='event_participants', fields=fields, values=entry)
         st.rerun()
     
     def remove_participants(self, selection):
@@ -1037,9 +1364,11 @@ class EventGroupParticipants():
         group_id_index = selection.columns.tolist().index('event_group_id')
         for entry in selection.to_numpy().tolist():
             # Remove participant
-            self.participants_sql.delete(entry[id_index])
+            #self.participants_sql.delete(entry[id_index])
+            sql.delete_db(conn=supabase_db, table='event_participants', entry_id=entry[id_index])
             # Refresh participants
-            self.participants_df = pd.DataFrame(self.participants_sql.read())
+            #self.participants_df = pd.DataFrame(self.participants_sql.read())
+            self.participants_df = sql.read_db(conn=supabase_db, table='event_participants', filter=[['event_id', self.event_df['id'].tolist()[0]]], legacy=False)
             # If no participants linked to assigned group, remove this group
             if not self.participants_df.empty:
                 if entry[group_id_index] not in self.participants_df['event_group_id'].tolist():
@@ -1071,39 +1400,45 @@ class Individuals():
         event_id = event_df['id'].tolist()[0]
         
         # Event participants
-        self.event_participants_sql = sql.event_participants()
-        self.event_participants_df = pd.DataFrame(self.event_participants_sql.read(filter=f"WHERE table.event_id={event_id}"))
+        #self.event_participants_sql = sql.event_participants()
+        #self.event_participants_df = pd.DataFrame(self.event_participants_sql.read(filter=f"WHERE table.event_id={event_id}"))
+        self.event_participants_df = data.event_participants_df
         if not self.event_participants_df.empty: self.event_participants_df = self.event_participants_df.sort_values(by=['event_groups_name','name'])
         
         # Scoring cards
-        self.scoring_cards_sql = sql.scoring_cards()
-        self.scoring_cards_df = pd.DataFrame(self.scoring_cards_sql.read(filter=f"WHERE table.event_id={event_id}"))
+        #self.scoring_cards_sql = sql.scoring_cards()
+        #self.scoring_cards_df = pd.DataFrame(self.scoring_cards_sql.read(filter=f"WHERE table.event_id={event_id}"))
+        self.scoring_cards_df = data.scoring_cards_df
         if not self.scoring_cards_df.empty: self.scoring_cards_df = self.scoring_cards_df.sort_values(by='name')
         else: return
-        scoring_cards_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_cards_df['id'].tolist()))])        
+        #scoring_cards_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_cards_df['id'].tolist()))])        
         
         # Scoring card participants
-        self.scoring_card_participants_sql = sql.scoring_card_participants()
-        self.scoring_card_participants_df = pd.DataFrame(self.scoring_card_participants_sql.read(filter=f"WHERE table.scoring_card_id IN ({scoring_cards_ids})"))
+        #self.scoring_card_participants_sql = sql.scoring_card_participants()
+        #self.scoring_card_participants_df = pd.DataFrame(self.scoring_card_participants_sql.read(filter=f"WHERE table.scoring_card_id IN ({scoring_cards_ids})"))
+        self.scoring_card_participants_df = data.scoring_cards_participants_df
         if not self.scoring_card_participants_df.empty: self.scoring_card_participants_df = self.scoring_card_participants_df.sort_values(by=['scoring_card_groups_name','name'])
         else: return
-        scoring_card_participants_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_card_participants_df['id'].tolist()))])
+        #scoring_card_participants_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_card_participants_df['id'].tolist()))])
         
         # Scoring rounds
-        self.scoring_rounds_sql = sql.scoring_rounds()
-        self.scoring_rounds_df = pd.DataFrame(self.scoring_rounds_sql.read(filter=f"WHERE table.scoring_card_participant_id IN ({scoring_card_participants_ids})"))
+        #self.scoring_rounds_sql = sql.scoring_rounds()
+        #self.scoring_rounds_df = pd.DataFrame(self.scoring_rounds_sql.read(filter=f"WHERE table.scoring_card_participant_id IN ({scoring_card_participants_ids})"))
+        self.scoring_rounds_df = data.scoring_rounds_df
         if self.scoring_rounds_df.empty: return
-        course_tees_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_rounds_df['course_tee_id'].tolist()))])
-        scoring_rounds_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_rounds_df['id'].tolist()))])
+        #course_tees_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_rounds_df['course_tee_id'].tolist()))])
+        #scoring_rounds_ids = ','.join([str(x) for x in list(dict.fromkeys(self.scoring_rounds_df['id'].tolist()))])
         
         # Course tees
-        self.course_tees_sql = sql.course_tees()
-        self.course_tees_df = pd.DataFrame(self.course_tees_sql.read(filter=f"WHERE table.id IN ({course_tees_ids})"))
+        #self.course_tees_sql = sql.course_tees()
+        #self.course_tees_df = pd.DataFrame(self.course_tees_sql.read(filter=f"WHERE table.id IN ({course_tees_ids})"))
+        self.course_tees_df = data.course_tees_df
         if self.course_tees_df.empty: return        
         
         # Scoring holes
-        self.scoring_holes_sql = sql.scoring_holes()
-        self.scoring_holes_df = pd.DataFrame(self.scoring_holes_sql.read(filter=f"WHERE table.scoring_round_id IN ({scoring_rounds_ids})"))
+        #self.scoring_holes_sql = sql.scoring_holes()
+        #self.scoring_holes_df = pd.DataFrame(self.scoring_holes_sql.read(filter=f"WHERE table.scoring_round_id IN ({scoring_rounds_ids})"))
+        self.scoring_holes_df = data.scoring_holes_df
         if self.scoring_holes_df.empty: return
         
         # Points card
@@ -1172,40 +1507,43 @@ class Individuals():
             self.points_card = points_card
             #print(points_card)
         
-        exp = st.expander(label='Individual Leaderboard')
-        with exp:
-            header_con = st.container(horizontal=True, width='stretch')
-            st_extended = header_con.toggle(label='Extended', key='event_card_extended_toggle', width='content')
-            
-            dataframe_df = points_card
-            column_config = {key: None for key in dataframe_df.columns.to_list()}
-            column_config['Rank'] = st.column_config.NumberColumn(format="%d", disabled=True)
-            column_config['Name'] = st.column_config.TextColumn(disabled=True)
-            column_config['Shots'] = st.column_config.NumberColumn(format="%d", disabled=True)
-            column_config['Points'] = st.column_config.NumberColumn(format="%d", disabled=True)
-            if st_extended:
-                #print('Showing extended info')
-                for hole in range(1,19):
-                    column_config[f'S{hole}p'] = st.column_config.NumberColumn(label=f'S{hole}', format="%d", disabled=True)
-                        
-            rounds_completed = True            
-            for active in self.scoring_rounds_df['active'].tolist():
-                if active:
-                    rounds_completed = False
-                    break
+        @st.fragment
+        def fragment_individuals():
+            exp = st.expander(label='Individual Leaderboard')
+            with exp:
+                header_con = st.container(horizontal=True, width='stretch')
+                st_extended = header_con.toggle(label='Extended', key='event_card_extended_toggle', width='content')
                 
-            if not rounds_completed:
-                column_config['Hole'] = st.column_config.NumberColumn(format="%d", disabled=True)
-            else:
-                #winner
-                pass
-            
-            st.dataframe(key='individuals_data',
-                        data=dataframe_df,
-                        hide_index=True,
-                        column_config=column_config,
-                        )
-            
+                dataframe_df = points_card
+                column_config = {key: None for key in dataframe_df.columns.to_list()}
+                column_config['Rank'] = st.column_config.NumberColumn(format="%d", disabled=True)
+                column_config['Name'] = st.column_config.TextColumn(disabled=True)
+                column_config['Shots'] = st.column_config.NumberColumn(format="%d", disabled=True)
+                column_config['Points'] = st.column_config.NumberColumn(format="%d", disabled=True)
+                if st_extended:
+                    #print('Showing extended info')
+                    for hole in range(1,19):
+                        column_config[f'S{hole}p'] = st.column_config.NumberColumn(label=f'S{hole}', format="%d", disabled=True)
+                            
+                rounds_completed = True            
+                for active in self.scoring_rounds_df['active'].tolist():
+                    if active:
+                        rounds_completed = False
+                        break
+                    
+                if not rounds_completed:
+                    column_config['Hole'] = st.column_config.NumberColumn(format="%d", disabled=True)
+                else:
+                    #winner
+                    pass
+                
+                st.dataframe(key='individuals_data',
+                            data=dataframe_df,
+                            hide_index=True,
+                            column_config=column_config,
+                            )
+        fragment_individuals()
+
 
 class EventWinnerNominations():
     obj = None
@@ -1217,11 +1555,15 @@ class EventWinnerNominations():
         #print(points_card)
         if event_df is not None:
             event_id = event_df['id'].tolist()[0]
-            self.event_winner_nominations_sql = this_sql = sql.event_winner_nominations()
-            self.event_winner_nominations_df = this_sql.read(filter=f"WHERE table.event_id={event_id}")
+            #self.event_winner_nominations_sql = this_sql = sql.event_winner_nominations()
+            #self.event_winner_nominations_df = this_sql.read(filter=f"WHERE table.event_id={event_id}")
+            filter = [['event_id', event_id]
+                      ]
+            self.event_winner_nominations_df = sql.read_db(conn=supabase_db, table='event_winner_nominations', filter=filter, legacy=False)
 
-            event_participants_sql = sql.event_participants()
-            event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id={event_id}")
+            #event_participants_sql = sql.event_participants()
+            #event_participants_df = event_participants_sql.read(filter=f"WHERE table.event_id={event_id}")
+            event_participants_df = data.event_participants_df
             if event_participants_df is None: return
             if event_participants_df.empty: return
             event_participants_df = event_participants_df.sort_values(by='name')
@@ -1237,9 +1579,12 @@ class EventWinnerNominations():
             nominations_df['points'] = None
 
             #print(f'Event ID = {event_id}')
-            if self.event_winner_nominations_df is not None:
+            if not self.event_winner_nominations_df.empty:
                 for event_participant_id in event_participants_df['id'].tolist():
                     # Read nominations
+                    #print(f'Event participant ID = {event_participant_id}')
+                    #print(event_participants_df)
+                    #print(self.event_winner_nominations_df)
                     nomination_df = self.event_winner_nominations_df.query(f"event_participant_id == {event_participants_df.at[event_participant_id, 'id']}")
                     if nomination_df is not None:
                         if not nomination_df.empty:
@@ -1263,10 +1608,11 @@ class EventWinnerNominations():
             # Hide other nominations if no scoring data exist
             if points_card is None:
                 #nominations_df = nominations_df.query(f"name == ")
-                print(st.user.to_dict())
-                lu_participants_sql = sql.participants()
-                lu_participants_df = lu_participants_sql.read(f"WHERE table.email = '{st.user.email.lower()}'")
-                print(lu_participants_df)
+                #print(st.user.to_dict())
+                #lu_participants_sql = sql.participants()
+                #lu_participants_df = lu_participants_sql.read(f"WHERE table.email = '{st.user.email.lower()}'")
+                lu_participants_df = sql.read_db(conn=supabase_db, table='participants', filter=[['email', st.user.email.lower()]], legacy=False)
+                #print(lu_participants_df)
                 nominations_df = nominations_df.query(f"name == '{lu_participants_df['name'].tolist()[0]}'")
                 
 
@@ -1288,7 +1634,7 @@ class EventWinnerNominations():
                         event_participant_id = nominations_df.iloc[index]['id']
                         #print(f'Participant with ID:{event_participant_id} changed')
                         
-                        update_sql = self.event_winner_nominations_sql
+                        #update_sql = self.event_winner_nominations_sql
                         update_df = self.event_winner_nominations_df
 
                         # Create entry if new
@@ -1297,14 +1643,17 @@ class EventWinnerNominations():
                         #print(update_df)
                         if update_df is None:
                             #print('Create first')
-                            update_sql.add(fields=fields, values=values)
+                            #update_sql.add(fields=fields, values=values)
+                            sql.write_db(conn=supabase_db, table='event_winner_nominations', fields=fields, values=values)
                         elif update_df.query(f"event_participant_id == {event_participant_id}").empty:
                             #print('Create entry')
-                            update_sql.add(fields=fields, values=values)
+                            #update_sql.add(fields=fields, values=values)
+                            sql.write_db(conn=supabase_db, table='event_winner_nominations', fields=fields, values=values)
                         else:
                             #print('Update entry')
                             update_id = update_df.query(f"event_participant_id == {event_participant_id}")['id'].tolist()[0]
-                            update_sql.update(id=update_id, fields=fields, values=values)
+                            #update_sql.update(id=update_id, fields=fields, values=values)
+                            sql.write_db(conn=supabase_db, table='event_winner_nominations', entry_id=update_id, fields=fields, values=values)
 
                 st.rerun()
 
@@ -1322,7 +1671,7 @@ class EventWinnerNominations():
             
 
 # Populate page 
-with st.spinner('Loading data'):
+with st.spinner('Loading page...'):
     con = st.container(horizontal=True, vertical_alignment='center')
 
     st_details = EventDetails(df=st.session_state.event)
@@ -1338,11 +1687,12 @@ with st.spinner('Loading data'):
     st_groups_participants = EventGroupParticipants(event_df=st.session_state.event)
 
     with con:
-        if st.button(label='', icon=':material/arrow_back:'):
-            st.session_state.event = None
-            session_states.save_states()
-            st.session_state.page = st_details.parent_page
-            st.rerun()
+        if st.button(label='', icon=':material/arrow_back:', on_click=change_to_parent_page, args=[st_details.parent_page]):
+            pass
+            #st.session_state.event = None
+            #session_states.save_states()
+            #st.session_state.page = st_details.parent_page
+            #st.rerun()
         if st.button(label='', icon=':material/refresh:'):
             st.rerun()
         st.subheader(f"Event: {st.session_state.event['name'].tolist()[0]}")

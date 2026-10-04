@@ -3,6 +3,9 @@ import session_states
 import pandas as pd
 import sql
 
+global_admin = False
+# New Load page dataframe
+supabase_db = sql.get_supabase_admin()
 
 class CourseDetails():
     obj = None
@@ -12,7 +15,7 @@ class CourseDetails():
            
     def __init__(self, df=None):
         self.obj = st.expander(label='Details')
-        self.df_sql = sql.courses()
+        #self.df_sql = sql.courses()
         self.df = df
         df_id = df['id'].tolist()[0]
         
@@ -34,8 +37,10 @@ class CourseDetails():
         if self.df is not None:
             fields = ['name', 'description', 'active']
             values = [name, description, active]
-            self.df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
-            st.session_state.course = self.df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+            #self.df_sql.update(id=self.df['id'].tolist()[0], fields=fields, values=values)
+            sql.write_db(conn=supabase_db, table='courses', entry_id=self.df['id'].tolist()[0], fields=fields, values=values)
+            #st.session_state.course = self.df_sql.read(filter=f"WHERE table.id={self.df['id'].tolist()[0]}")
+            st.session_state.course = sql.read_db(conn=supabase_db, table='courses', filter=[['id', self.df['id'].tolist()[0]]], legacy=False)
             st.rerun()
             
     @st.dialog(title='Delete confirmation')        
@@ -45,7 +50,8 @@ class CourseDetails():
         with area:
             if st.button(label='Yes'):
                 if self.df is not None:
-                    self.df_sql.delete(id=self.df['id'].tolist()[0])
+                    #self.df_sql.delete(id=self.df['id'].tolist()[0])
+                    sql.remove_db(conn=supabase_db, table='courses', filter=[['id', self.df['id'].tolist()[0]]], legacy=False)
                     st.session_state.course = None
                     st.session_state.page = self.parent_page
                     st.rerun()
@@ -65,8 +71,9 @@ class CourseCourseTees():
         self.child_page = "app_pages/course_tees/course_tees_detail.py"
         
         self.course_df = course_df
-        self.course_tees_sql = sql.course_tees()
-        self.course_tees_df = pd.DataFrame(self.course_tees_sql.read(filter=f"WHERE course_id={course_df['id'].tolist()[0]}"))
+        #self.course_tees_sql = sql.course_tees()
+        #self.course_tees_df = pd.DataFrame(self.course_tees_sql.read(filter=f"WHERE course_id={course_df['id'].tolist()[0]}"))
+        self.course_tees_df = sql.read_db(conn=supabase_db, table='course_tees', filter=[['course_id', course_df['id'].tolist()[0]]], legacy=False)
         if not self.course_tees_df.empty: self.course_tees_df = self.course_tees_df.sort_values(by='name')
         
         exp_course_tees = st.expander("Tees", expanded=True)
@@ -108,7 +115,8 @@ class CourseCourseTees():
         if st.button("Submit"):
             fields = ["name", "description", "course_id"]
             values = [name, description, course_id]
-            self.course_tees_sql.add(fields=fields, values=values)
+            #self.course_tees_sql.add(fields=fields, values=values)
+            sql.write_db(conn=supabase_db, table='course_tees', fields=fields, values=values)
             st.rerun()
             
     # Open detail page            

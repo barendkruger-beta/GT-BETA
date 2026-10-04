@@ -2,6 +2,10 @@ import streamlit as st
 import session_states
 import sql
 
+global_admin = False
+# New Load page dataframe
+supabase_db = sql.get_supabase_admin()
+
 st.subheader("Groups")
 
 class GroupsOverview():
@@ -12,9 +16,10 @@ class GroupsOverview():
     def __init__(self):
         self.child_page = "app_pages/groups/groups_detail.py"
     
-        conn = sql.connect()
-        df_sql = self.df_sql = sql.groups()
-        df = self.df = df_sql.read()
+        #conn = sql.connect()
+        #df_sql = self.df_sql = sql.groups()
+        #df = self.df = df_sql.read()
+        df = self.df = sql.read_db(conn=supabase_db, table='groups', filter=None, legacy=False)
                 
         st_con = st.container(border=False)
         with st_con:
@@ -54,7 +59,8 @@ class GroupsOverview():
         if st.button("Submit"):
             fields = ["name", "description", "active"]
             values = [name, description, active]
-            self.df_sql.add(fields=fields, values=values)
+            #self.df_sql.add(fields=fields, values=values)
+            sql.write_db(conn=supabase_db, table='groups', fields=fields, values=values)
             st.rerun()
             
     def open(self, index=None, df=None):
